@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+
+<div class="auth-card">
+    <h2>Create Account</h2>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="text" id="username" placeholder="Username (unique)">
+    <input type="text" id="displayName" placeholder="Display Name">
+    <input type="password" id="password" placeholder="Create password">
+    <input type="password" id="confirmPassword" placeholder="Confirm password">
+
+    <button onclick="signup()">Sign Up</button>
+
+    <p id="error" class="error"></p>
+
+    <div class="auth-footer">
+        Already have an account?
+        <a href="login.html">Login</a>
+    </div>
+</div>
+<script>
+function signup() {
+
+    const email = document.getElementById("email").value.trim();
+    const username = document.getElementById("username").value.trim();
+    const displayName = document.getElementById("displayName").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const confirmPassword = document.getElementById("confirmPassword").value.trim();
+
+    if (!email || !username || !displayName || !password || !confirmPassword) {
+        document.getElementById("error").textContent =
+            "All fields are required";
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        document.getElementById("error").textContent =
+            "Passwords do not match";
+        return;
+    }
+
+    fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email: email,
+            username: username,
+            displayName: displayName,
+            password: password
+        })
+    })
+    .then(res => res.text())
+    .then(data => {
+        if (data === "User registered successfully") {
+            window.location.href = "login.html";
+        } else {
+            document.getElementById("error").textContent = data;
+        }
+    })
+    .catch(() => {
+        document.getElementById("error").textContent =
+            "Server error";
+    });
+}
+</script>
+
+</body>
+</html>
