@@ -348,17 +348,6 @@ function loadAllUsers() {
         allUsers = users.filter(u => u !== username);
     });
 }
-document.getElementById("newChatBtn").onclick = () => {
-
-    const target = prompt("Enter username to chat with:");
-    if (!target) return;
-
-    selectedUser = target;
-    chatWith.textContent = target;
-    messageInput.disabled = false;
-
-    loadConversation(username, target);
-};
 
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -405,6 +394,62 @@ document.addEventListener("DOMContentLoaded", function () {
 	    localStorage.clear();
 	    window.location.href = "login.html";
 	});
+	
+	// ===== NEW CHAT MODAL =====
+
+	const newChatBtn = document.getElementById("newChatBtn");
+	const newChatModal = document.getElementById("newChatModal");
+	const newChatSearch = document.getElementById("newChatSearch");
+	const newChatUserList = document.getElementById("newChatUserList");
+	const closeNewChatBtn = document.getElementById("closeNewChatBtn");
+
+	// Open modal
+	newChatBtn.addEventListener("click", () => {
+	    newChatModal.classList.add("show");
+	    newChatSearch.value = "";
+	    renderUserSearchList(allUsers);
+	});
+
+	// Close modal
+	closeNewChatBtn.addEventListener("click", () => {
+	    newChatModal.classList.remove("show");
+	});
+
+	// Live search filter
+	newChatSearch.addEventListener("input", () => {
+	    const query = newChatSearch.value.toLowerCase();
+
+	    const filtered = allUsers.filter(user =>
+	        user.toLowerCase().includes(query)
+	    );
+
+	    renderUserSearchList(filtered);
+	});
+
+	function renderUserSearchList(users) {
+
+	    newChatUserList.innerHTML = "";
+
+	    users.forEach(user => {
+
+	        const li = document.createElement("li");
+	        li.textContent = user;
+
+	        li.onclick = () => {
+
+	            selectedUser = user;
+	            chatWith.textContent = user;
+	            messageInput.disabled = false;
+	            messageInput.focus();
+
+	            loadConversation(username, user);
+
+	            newChatModal.classList.remove("show");
+	        };
+
+	        newChatUserList.appendChild(li);
+	    });
+	}
 	
 	// ===== SETTINGS & MODALS =====
 
