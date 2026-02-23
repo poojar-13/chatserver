@@ -792,3 +792,13 @@ body {
 .user-search-list li:hover {
   background: #f2f2f2;
 }
+
+.last-message {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.time {
+  font-size: 11px;
+  opacity: 0.5;
+}

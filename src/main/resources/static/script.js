@@ -264,59 +264,81 @@ function loadConversations() {
     .then(res => res.json())
     .then(users => {
 
-        console.log("CONVERSATIONS:", users);
+        // For each user, fetch last message
+        const promises = users.map(user => {
 
-        renderConversationList(users);
-    })
-    .catch(err => {
-        console.error("Failed to load conversations", err);
+            return fetch(`/api/messages/${username}/${user}`, {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            })
+            .then(res => res.json())
+            .then(messages => {
+
+                const lastMessage = messages[messages.length - 1];
+
+                return {
+                    user,
+                    lastMessage: lastMessage ? lastMessage.content : "",
+                    timestamp: lastMessage ? lastMessage.timestamp : 0
+                };
+            });
+        });
+
+        Promise.all(promises).then(conversations => {
+
+            // Sort by newest message
+            conversations.sort((a, b) => b.timestamp - a.timestamp);
+
+            renderConversationList(conversations);
+        });
+
     });
 }
 
-function renderConversationList(users) {
+function renderConversationList(conversations) {
 
     onlineList.innerHTML = "";
 
-    users.forEach(user => {
+    conversations.forEach(conv => {
 
+        const user = conv.user;
         const isOnline = currentOnlineUsers.includes(user);
 
         const li = document.createElement("li");
-		li.innerHTML = `
-		    <div class="user-row">
-		        <div class="avatar-wrapper">
-		            <div class="avatar-circle">
-		                ${user.charAt(0).toUpperCase()}
-		            </div>
-		            ${isOnline ? '<div class="online-indicator"></div>' : ''}
-		        </div>
-		        <div class="user-info">
-		            <div class="username">${user}</div>
-		        </div>
-		    </div>
-		`;
 
+        li.innerHTML = `
+            <div class="user-row">
+                <div class="avatar-wrapper">
+                    <div class="avatar-circle">
+                        ${user.charAt(0).toUpperCase()}
+                    </div>
+                    ${isOnline ? '<div class="online-indicator"></div>' : ''}
+                </div>
+
+                <div class="user-info">
+                    <div class="username">${user}</div>
+                    <div class="last-message">
+                        ${conv.lastMessage}
+                    </div>
+                </div>
+
+                <div class="time">
+                    ${conv.timestamp ? formatTime(conv.timestamp) : ""}
+                </div>
+            </div>
+        `;
 
         li.dataset.user = user;
 
-		li.onclick = () => {
-		    selectedUser = user;
-		    updateBlockButton();
-
-		    document.querySelectorAll("#onlineList li")
-		        .forEach(item => item.classList.remove("active"));
-
-		    li.classList.add("active");
-
-		    chatWith.textContent = user;
-		    messageInput.disabled = false;
-		    messageInput.focus();
-
-		    loadConversation(username, user);
-			
-			socket.send("SEEN:" + user);
-		};
-
+        li.onclick = () => {
+            selectedUser = user;
+            chatWith.textContent = user;
+            messageInput.disabled = false;
+            messageInput.focus();
+            loadConversation(username, user);
+            socket.send("SEEN:" + user);
+        };
 
         onlineList.appendChild(li);
     });
