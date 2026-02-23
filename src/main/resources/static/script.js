@@ -82,6 +82,7 @@ socket.onmessage = (event) => {
 
     // PRIVATE MESSAGE
 	if (data.startsWith("PRIVATE|")) {
+
 	    const [, from, to, text, time] = data.split("|");
 	    const otherUser = from === username ? to : from;
 
@@ -92,22 +93,22 @@ socket.onmessage = (event) => {
 	    chatStore[otherUser].push({ from, text, time });
 
 	    if (selectedUser === otherUser) {
-	        addMessage(
-	            from === username,
-	            text,
-	            time
-	        );
+
+	        addMessage(from === username, text, time);
+
+	        // Clear unread when viewing
+	        unread[otherUser] = 0;
+
 	    } else {
+
 	        unread[otherUser] = (unread[otherUser] || 0) + 1;
-	        updateUsersListUI();
 	    }
 
+	    loadConversations(); // re-render sorted list
+
 	    return;
-		};
-
 	}
-
-
+};
 
 /* SEND */
 
@@ -307,31 +308,33 @@ function renderConversationList(conversations) {
 
         const li = document.createElement("li");
 
-        li.innerHTML = `
-            <div class="user-row">
-                <div class="avatar-wrapper">
-                    <div class="avatar-circle">
-                        ${user.charAt(0).toUpperCase()}
-                    </div>
-                    ${isOnline ? '<div class="online-indicator"></div>' : ''}
-                </div>
+		li.innerHTML = `
+		    <div class="user-row">
+		        <div class="avatar-wrapper">
+		            <div class="avatar-circle">
+		                ${user.charAt(0).toUpperCase()}
+		            </div>
+		            ${isOnline ? '<div class="online-indicator"></div>' : ''}
+		        </div>
 
-                <div class="user-info">
-                    <div class="username">${user}</div>
-                    <div class="last-message">
-                        ${conv.lastMessage}
-                    </div>
-                </div>
+		        <div class="user-info">
+		            <div class="username">${user}</div>
+		            <div class="last-message">${conv.lastMessage}</div>
+		        </div>
 
-                <div class="time">
-                    ${conv.timestamp ? formatTime(conv.timestamp) : ""}
-                </div>
-            </div>
-        `;
-
+		        <div class="right-side">
+		            <div class="time">
+		                ${conv.timestamp ? formatTime(conv.timestamp) : ""}
+		            </div>
+		            ${unread[user] > 0 ? `<div class="unread-badge">${unread[user]}</div>` : ""}
+		        </div>
+		    </div>
+		`;
+		
         li.dataset.user = user;
 
         li.onclick = () => {
+			unread[user] = 0;
             selectedUser = user;
             chatWith.textContent = user;
             messageInput.disabled = false;
