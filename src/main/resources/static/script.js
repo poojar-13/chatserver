@@ -10,6 +10,35 @@ if (!username || !token) {
     window.location.href = "login.html";
 }
 
+function apiFetch(url, options = {}) {
+
+    const defaultHeaders = {
+        "Authorization": "Bearer " + token
+    };
+
+    options.headers = {
+        ...defaultHeaders,
+        ...options.headers
+    };
+
+    return fetch(url, options)
+        .then(res => {
+
+			if (res.status === 401) {
+
+			    localStorage.clear();  
+			    sessionStorage.setItem("sessionExpired", "true");
+			    window.location.href = "login.html";
+
+			    return Promise.reject("Unauthorized");
+			}
+            return res;
+        })
+        .catch(err => {
+            console.error("API Error:", err);
+            throw err;
+        });
+}
 
 let selectedUser = null;
 const chatStore = {};   // per-user chat history
@@ -28,10 +57,6 @@ socket.onopen = () => {
     console.log("WEBSOCKET CONNECTED");
     socket.send(username);
 };
-
-// Load all users separately
-loadAllUsers();
-
 
 socket.onerror = (e) => {
     console.log("WEBSOCKET ERROR", e);
@@ -224,11 +249,7 @@ function loadConversation(user1, user2) {
 
     console.log("LOADING CONVERSATION:", user1, user2);
 
-    fetch(`http://localhost:8080/api/messages/${user1}/${user2}`, {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
+	apiFetch(`/api/messages/${user1}/${user2}`)
     .then(res => res.json())
     .then(messages => {
 
@@ -257,22 +278,14 @@ function formatTime(timestamp) {
 
 function loadConversations() {
 
-    fetch(`/api/messages/conversations/${username}`, {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
+	apiFetch(`/api/messages/conversations/${username}`)
     .then(res => res.json())
     .then(users => {
 
         // For each user, fetch last message
         const promises = users.map(user => {
 
-            return fetch(`/api/messages/${username}/${user}`, {
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
+            return apiFetch(`/api/messages/${username}/${user}`)
             .then(res => res.json())
             .then(messages => {
 
@@ -341,6 +354,7 @@ function renderConversationList(conversations) {
             messageInput.focus();
             loadConversation(username, user);
             socket.send("SEEN:" + user);
+			updateBlockButton();
         };
 
         onlineList.appendChild(li);
@@ -363,11 +377,7 @@ function updateOnlineStatus(onlineUsers) {
 }
 
 function loadAllUsers() {
-    fetch("http://localhost:8080/api/users", {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
+	apiFetch("/api/users")
     .then(res => res.json())
     .then(users => {
         allUsers = users.filter(u => u !== username);
@@ -375,6 +385,36 @@ function loadAllUsers() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+	
+	
+	//block button
+	const blockUserBtn = document.getElementById("blockUserBtn");
+
+	blockUserBtn.addEventListener("click", () => {
+
+	    if (!selectedUser) return;
+
+	    const isBlocking = blockUserBtn.textContent === "Block";
+
+	    const url = isBlocking ? "/api/users/block" : "/api/users/unblock";
+	    const method = isBlocking ? "POST" : "DELETE";
+
+	    apiFetch(url, {
+	        method: method,
+	        headers: {
+	            "Content-Type": "application/json"
+	        },
+	        body: JSON.stringify({
+	            blocker: username,
+	            blocked: selectedUser
+	        })
+	    })
+	    .then(res => res.text())
+	    .then(msg => {
+	        alert(msg);
+	        updateBlockButton();
+	    });
+	});
 
     chatBox = document.getElementById("chat-box");
     messageInput = document.getElementById("messageInput");
@@ -470,6 +510,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	            loadConversation(username, user);
 
 	            newChatModal.classList.remove("show");
+				updateBlockButton();
 	        };
 
 	        newChatUserList.appendChild(li);
@@ -507,11 +548,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Open Blocked Users
 	viewBlockedBtn.addEventListener("click", () => {
 
-	    fetch(`/api/users/blocked/${username}`, {
-	        headers: {
-	            "Authorization": "Bearer " + token
-	        }
-	    })
+		apiFetch(`/api/users/blocked/${username}`)
 	    .then(res => res.json())
 	    .then(users => {
 
@@ -565,11 +602,7 @@ function updateBlockButton() {
 
     btn.style.display = "inline-block";
 
-    fetch(`/api/users/is-blocked/${username}/${selectedUser}`, {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
+	apiFetch(`/api/users/is-blocked/${username}/${selectedUser}`)
     .then(res => res.json())
     .then(data => {
         btn.textContent = data.blocked ? "Unblock" : "Block";
@@ -578,17 +611,16 @@ function updateBlockButton() {
 
 function unblockUser(user) {
 
-    fetch("/api/users/unblock", {
-        method: "DELETE",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify({
-            blocker: username,
-            blocked: user
-        })
-    })
+	apiFetch("/api/users/unblock", {
+	    method: "DELETE",
+	    headers: {
+	        "Content-Type": "application/json"
+	    },
+		body: JSON.stringify({
+		    blocker: username,
+		    blocked: user
+		})
+	})
     .then(res => res.text())
     .then(data => {
         alert(data);
@@ -670,16 +702,15 @@ function editMessage(id, messageElement) {
 
         if (e.key === "Enter") {
 
-            fetch(`/api/messages/${id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({
-                    content: input.value
-                })
-            })
+			apiFetch(`/api/messages/${id}`, {
+			    method: "PUT",
+			    headers: {
+			        "Content-Type": "application/json"
+			    },
+				body: JSON.stringify({
+				    content: input.value
+				})
+			})
             .then(res => res.json())
             .then(updated => {
 
@@ -753,11 +784,10 @@ function attachUIEvents() {
             return;
         }
 
-        fetch("/api/users/change-password", {
+		apiFetch("/api/users/change-password", {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({ oldPassword, newPassword })
         })
@@ -767,7 +797,7 @@ function attachUIEvents() {
 
             if (msg === "Password changed successfully") {
                 setTimeout(() => {
-                    passwordModal.classList.remove("open");
+                    passwordModal.classList.remove("show");
                 }, 1200);
             }
         });
@@ -782,11 +812,10 @@ function attachUIEvents() {
             return;
         }
 
-        fetch("/api/users/update-username", {
+		apiFetch("/api/users/update-username", {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({ newUsername })
         })
