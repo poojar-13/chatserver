@@ -819,3 +819,31 @@ body {
   min-width: 18px;
   text-align: center;
 }
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #4a90e2;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.success {
+  background: #4a90e2;
+}
+
+.toast.error {
+  background: #e74c3c;
+}
