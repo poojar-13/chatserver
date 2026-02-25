@@ -312,41 +312,53 @@ function renderConversationList(conversations) {
     onlineList.innerHTML = "";
 
     conversations.forEach(conv => {
-
-        const user = conv.user;
+		const user = conv.user;
+		const lastMessage = conv.lastMessage;
+		const time = conv.timestamp ? formatTime(conv.timestamp) : "";
+		const unreadCount = unread[user] || 0;
         const isOnline = currentOnlineUsers.includes(user);
 
         const li = document.createElement("li");
 
 		li.innerHTML = `
-		    <div class="user-row">
-		        <div class="avatar-wrapper">
-		            <div class="avatar-circle">
-		                ${user.charAt(0).toUpperCase()}
-		            </div>
-		            ${isOnline ? '<div class="online-indicator"></div>' : ''}
-		        </div>
-
-		        <div class="user-info">
-		            <div class="username">${user}</div>
-		            <div class="last-message">${conv.lastMessage}</div>
-		        </div>
-
-		        <div class="right-side">
-		            <div class="time">
-		                ${conv.timestamp ? formatTime(conv.timestamp) : ""}
-		            </div>
-		            ${unread[user] > 0 ? `<div class="unread-badge">${unread[user]}</div>` : ""}
-		        </div>
+		  <div class="avatar-wrapper">
+		    <div class="avatar-circle">
+		      ${user.charAt(0).toUpperCase()}
 		    </div>
-		`;
-		
+		  </div>
+
+		  <div class="convo-content">
+
+		    <div class="convo-header">
+		      <span class="convo-name ${unreadCount > 0 ? 'unread-name' : ''}">
+		        ${user}
+		      </span>
+
+		      <span class="convo-time">
+		        ${time}
+		      </span>
+		    </div>
+
+		    <div class="convo-footer">
+		      <span class="convo-preview">
+		        ${lastMessage}
+		      </span>
+
+		      ${unreadCount > 0 ? 
+		        `<span class="unread-badge">${unreadCount}</span>` 
+		        : ""}
+		    </div>
+
+		  </div>
+		`;		
         li.dataset.user = user;
 
         li.onclick = () => {
 			unread[user] = 0;
             selectedUser = user;
             chatWith.textContent = user;
+			const chatAvatar = document.getElementById("chatAvatar");
+			chatAvatar.textContent = user.charAt(0).toUpperCase();
             messageInput.disabled = false;
 			sendBtn.disabled = false;
             messageInput.focus();

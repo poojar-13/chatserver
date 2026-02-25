@@ -16,12 +16,13 @@ body {
 
 /* SIDEBAR */
 .users-panel {
-  width: 260px;
+  width: 340px;
   background: #ffffff;
   border-right: 1px solid #e5e6ef;
   padding: 20px 15px;
   display: flex;
   flex-direction: column;
+  box-shadow: 2px 0 6px rgba(0,0,0,0.03);
 }
 
 .users-panel h3 {
@@ -47,10 +48,52 @@ body {
   margin-bottom: 4px;
   position: relative;
   background: transparent;
+  display: flex;
+  gap: 12px;
 }
 
 #onlineList li:hover {
-  background: #f2f2f8;
+  background: #f0f1f7;
+}
+
+.convo-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.convo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.convo-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #2f2f3a;
+}
+
+.convo-time {
+  font-size: 12px;
+  color: #8a8fa3;
+}
+
+.convo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.convo-preview {
+  font-size: 13px;
+  color: #8a8fa3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
 #onlineList li.unread::after {
@@ -71,6 +114,7 @@ body {
   display: flex;
   flex-direction: column;
   background: #ffffff; /* keep container clean */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
 
 .chat-header {
@@ -82,10 +126,35 @@ body {
   border-bottom: 1px solid #e5e6ef;
 }
 
+.chat-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #dcdcf9;
+  color: #3a3a5c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.chat-username {
+  font-weight: 600;
+  font-size: 15px;
+  color: #2f2f3a;
+}
+
 /* MESSAGES */
 .chat-messages {
   flex: 1;
-  padding: 18px;
+  padding: 14px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -107,8 +176,8 @@ body {
 
 .bubble {
   padding: 8px 12px;
-  border-radius: 14px;
-  max-width: 55%;
+  border-radius: 12px;
+  max-width: 72%;
   font-size: 13px;
   line-height: 1.4;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
@@ -133,7 +202,7 @@ body {
 
 .timestamp {
   font-size: 10px;
-  opacity: 0.5;
+  opacity: 0.45;
   white-space: nowrap;
 }
 
@@ -148,16 +217,19 @@ body {
 
 .chat-input input {
   flex: 1;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #e3e3ec;
+  border-radius: 10px;
+  border: 1px solid #e2e3ea;
+  padding: 10px 14px;
   font-size: 14px;
   outline: none;
   transition: border 0.2s ease;
+  
 }
 
 .chat-input input:focus {
-  border-color: #8b8be0;
+  outline: none;
+  border-color: #5b4b8a;
+  box-shadow: 0 0 0 2px rgba(91, 75, 138, 0.08);
 }
 
 .chat-input button {
@@ -173,6 +245,15 @@ body {
 
 .chat-input button:hover {
   background: #4f4078;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(91, 75, 138, 0.25);
+  border-radius: 4px;
 }
 
 .user-row {
@@ -192,8 +273,8 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #e5e6fb;
-  color: #4a4a6a;
+  background: #dcdcf9;
+  color: #3a3a5c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -623,12 +704,12 @@ body {
 }
 
 .block-user-btn {
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
   border: none;
   background: #f8cfd6; /* soft pastel red */
   color: #7a3f4b;
-  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -814,13 +895,16 @@ body {
 }
 
 .unread-badge {
-  background: #7C3AED;
+  background: #5B4B8A;
   color: white;
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 12px;
   min-width: 18px;
-  text-align: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toast {
@@ -853,4 +937,8 @@ body {
 
 .chat-messages {
   background-size: 200% 200%;
+}
+
+.unread-name {
+  font-weight: 600;
 }
