@@ -145,10 +145,10 @@ function sendMessage() {
         return;
     }
 
-    if (msg) {
-        socket.send("DM:" + selectedUser + ":" + msg);
-        messageInput.value = "";
-    }
+	if (!msg) return;
+
+	socket.send("DM:" + selectedUser + ":" + msg);
+	messageInput.value = "";
 }
 
 
@@ -811,6 +811,11 @@ function attachUIEvents() {
             usernameMessage.textContent = "Username cannot be empty";
             return;
         }
+		
+		if (newUsername === username) {
+		    usernameMessage.textContent = "New username must be different";
+		    return;
+		}
 
 		apiFetch("/api/users/update-username", {
             method: "PUT",
