@@ -409,7 +409,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	    })
 	    .then(res => res.text())
 	    .then(msg => {
-			showToast(msg);
+			showToast(msg, msg.toLowerCase().includes("success") ? "success" : "error");
 	        updateBlockButton();
 	    });
 	});
@@ -623,7 +623,10 @@ function unblockUser(user) {
 	})
     .then(res => res.text())
     .then(data => {
-		showToast(data);
+		showToast(
+		    data,
+		    data.toLowerCase().includes("success") ? "success" : "error"
+		);
 		updateBlockButton();
     });
 }
