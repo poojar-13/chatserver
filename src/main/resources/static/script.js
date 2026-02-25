@@ -140,10 +140,7 @@ socket.onmessage = (event) => {
 function sendMessage() {
     const msg = messageInput.value.trim();
 
-    if (!selectedUser) {
-        alert("Select a user first");
-        return;
-    }
+	if (!selectedUser) return;
 
 	if (!msg) return;
 
@@ -351,6 +348,7 @@ function renderConversationList(conversations) {
             selectedUser = user;
             chatWith.textContent = user;
             messageInput.disabled = false;
+			sendBtn.disabled = false;
             messageInput.focus();
             loadConversation(username, user);
             socket.send("SEEN:" + user);
@@ -419,6 +417,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chatBox = document.getElementById("chat-box");
     messageInput = document.getElementById("messageInput");
     sendBtn = document.getElementById("sendBtn");
+	sendBtn.disabled = true;
     onlineList = document.getElementById("onlineList");
     chatWith = document.getElementById("chat-with");
 	sendBtn.onclick = sendMessage;
@@ -505,6 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	            selectedUser = user;
 	            chatWith.textContent = user;
 	            messageInput.disabled = false;
+				sendBtn.disabled = false;
 	            messageInput.focus();
 
 	            loadConversation(username, user);
