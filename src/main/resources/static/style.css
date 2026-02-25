@@ -70,7 +70,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #fafafe;
+  background: #ffffff; /* keep container clean */
 }
 
 .chat-header {
@@ -89,6 +89,15 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-shadow: inset 0 0 40px rgba(120, 90, 200, 0.08);
+
+  background: linear-gradient(
+    180deg,
+    #fdfcff 0%,
+    #efeaff 35%,
+    #e6ddff 70%,
+    #fdfcff 100%
+  );
 }
 
 .message {
@@ -118,14 +127,16 @@ body {
 
 
 .message.me .bubble {
-  background: #dcdcf9; /* soft lavender */
-  color: #2f2f4f;
+  background: #8476c4;  /* muted dusty lavender */
+  color: white;
+  border-bottom-right-radius: 6px;
 }
 
 .message.other .bubble {
   background: #ffffff;
-  border: 1px solid #ececf2;
-  color: #333;
+  color: #3f3f6b;
+  border: 1px solid rgba(107, 94, 168, 0.15);
+  border-bottom-left-radius: 6px;
 }
 
 .timestamp {
@@ -158,18 +169,18 @@ body {
 }
 
 .chat-input button {
-  padding: 12px 18px;
+  padding: 12px 22px;
   border-radius: 12px;
   border: none;
-  background: #8b8be0;
+  background: #5b4b8a;  /* darker muted purple */
   color: white;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.2s ease;
 }
 
 .chat-input button:hover {
-  background: #7575d4;
+  background: #4f4078;
 }
 
 .user-row {
@@ -268,7 +279,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: #ffffff;
+  background:#ffffff;
   border-bottom: 1px solid #ececf2;
 }
 
@@ -811,7 +822,7 @@ body {
 }
 
 .unread-badge {
-  background: #4a90e2;
+  background: #7C3AED;
   color: white;
   font-size: 11px;
   padding: 2px 6px;
@@ -841,9 +852,13 @@ body {
 }
 
 .toast.success {
-  background: #4a90e2;
+  background: #7C3AED;
 }
 
 .toast.error {
   background: #e74c3c;
+}
+
+.chat-messages {
+  background-size: 200% 200%;
 }
