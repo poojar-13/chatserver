@@ -132,6 +132,11 @@ body {
   gap: 12px;
 }
 
+.chat-user-text {
+  display: flex;
+  flex-direction: column;
+}
+
 .chat-avatar {
   width: 36px;
   height: 36px;
@@ -149,6 +154,11 @@ body {
   font-weight: 600;
   font-size: 15px;
   color: #2f2f3a;
+}
+
+.chat-status {
+  font-size: 12px;
+  color: #7a7f92;
 }
 
 /* MESSAGES */
@@ -301,6 +311,24 @@ body {
   background: #7ed6a5;
   border-radius: 50%;
   border: 2px solid white;
+}
+
+.chat-avatar-wrapper {
+  position: relative;
+  width: 36px;
+  height: 36px;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: none;
 }
 
 .new-chat-btn {

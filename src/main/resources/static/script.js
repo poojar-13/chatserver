@@ -75,7 +75,26 @@ socket.onmessage = (event) => {
 
     // ONLINE USERS
 	if (data.startsWith("USERS:")) {
+
 	    currentOnlineUsers = data.replace("USERS:", "").split(",");
+
+	    updateOnlineStatus(currentOnlineUsers);
+
+	    // Update header if currently chatting
+	    if (selectedUser) {
+
+	        const chatStatus = document.getElementById("chatStatus");
+	        const chatOnlineDot = document.getElementById("chatOnlineDot");
+
+	        if (currentOnlineUsers.includes(selectedUser)) {
+	            chatStatus.textContent = "Online";
+	            chatOnlineDot.style.display = "block";
+	        } else {
+	            chatStatus.textContent = "Offline";
+	            chatOnlineDot.style.display = "none";
+	        }
+	    }
+
 	    return;
 	}
 	
@@ -358,6 +377,19 @@ function renderConversationList(conversations) {
             selectedUser = user;
             chatWith.textContent = user;
 			const chatAvatar = document.getElementById("chatAvatar");
+			const chatStatus = document.getElementById("chatStatus");
+			const chatOnlineDot = document.getElementById("chatOnlineDot");
+
+			chatAvatar.textContent = user.charAt(0).toUpperCase();
+
+			if (currentOnlineUsers.includes(user)) {
+			    chatStatus.textContent = "Online";
+			    chatOnlineDot.style.display = "block";
+			} else {
+			    chatStatus.textContent = "Offline";
+			    chatOnlineDot.style.display = "none";
+			}
+			
 			chatAvatar.textContent = user.charAt(0).toUpperCase();
             messageInput.disabled = false;
 			sendBtn.disabled = false;
