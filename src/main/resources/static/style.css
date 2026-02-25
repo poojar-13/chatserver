@@ -308,9 +308,14 @@ body {
   right: -1px;
   width: 9px;
   height: 9px;
-  background: #7ed6a5;
+  background: #22c55e;
   border-radius: 50%;
   border: 2px solid white;
+  display: none;
+}
+
+.online-indicator.online {
+  display: block;
 }
 
 .chat-avatar-wrapper {

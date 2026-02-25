@@ -340,11 +340,12 @@ function renderConversationList(conversations) {
         const li = document.createElement("li");
 
 		li.innerHTML = `
-		  <div class="avatar-wrapper">
-		    <div class="avatar-circle">
-		      ${user.charAt(0).toUpperCase()}
-		    </div>
+		<div class="avatar-wrapper">
+		  <div class="avatar-circle">
+		    ${user.charAt(0).toUpperCase()}
 		  </div>
+		  <span class="online-indicator ${isOnline ? 'online' : ''}"></span>
+		</div>
 
 		  <div class="convo-content">
 
@@ -409,11 +410,14 @@ function updateOnlineStatus(onlineUsers) {
 
     items.forEach(li => {
         const user = li.dataset.user;
+        const indicator = li.querySelector(".online-indicator");
+
+        if (!indicator) return;
 
         if (onlineUsers.includes(user)) {
-            li.classList.add("online");
+            indicator.classList.add("online");
         } else {
-            li.classList.remove("online");
+            indicator.classList.remove("online");
         }
     });
 }
