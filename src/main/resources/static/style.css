@@ -170,7 +170,10 @@ body {
   display: flex;
   flex-direction: column;
   background: #f5f6fa;   /* soft neutral grey */
+  flex-direction: column;
+  background-size: 200% 200%;
 }
+
 
 .message {
   display: flex;
@@ -968,9 +971,6 @@ body {
   background: #e74c3c;
 }
 
-.chat-messages {
-  background-size: 200% 200%;
-}
 
 .unread-name {
   font-weight: 600;
@@ -988,4 +988,17 @@ body {
   color: #7a7f92;
   margin: 10px 0;
   opacity: 0.8;
+}
+
+.date-separator {
+  display: inline-block;
+  align-self: center;
+  margin: 16px auto;
+  padding: 4px 10px;
+  
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.03);
+  color: #7d8192;
+  border-radius: 14px;
 }

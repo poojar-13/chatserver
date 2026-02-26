@@ -18,6 +18,8 @@ public class Message {
     private String content;
 
     private LocalDateTime timestamp;
+    @Column(nullable = false)
+    private String status;
 
     public Message() {}
 
@@ -26,6 +28,15 @@ public class Message {
         this.receiver = receiver;
         this.content = content;
         this.timestamp = timestamp;
+        this.status = "SENT";
+    }
+    
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
     
     public void setContent(String content) {

@@ -337,10 +337,26 @@ function loadConversation(user1, user2) {
 
         chatBox.innerHTML = "";
 
-        messages.forEach(msg => {
-            const isMe = msg.sender === username;
-            addMessage(isMe, msg.content, formatTime(msg.timestamp), msg.id);
-        });
+		let lastDate = null;
+
+		messages.forEach(msg => {
+
+		    const messageDate = new Date(msg.timestamp).toDateString();
+
+		    if (lastDate !== messageDate) {
+		        addDateSeparator(msg.timestamp);
+		        lastDate = messageDate;
+		    }
+
+		    const isMe = msg.sender === username;
+
+		    addMessage(
+		        isMe,
+		        msg.content,
+		        formatTime(msg.timestamp),
+		        msg.id
+		    );
+		});
 
     })
     .catch(err => {
@@ -355,6 +371,38 @@ function formatTime(timestamp) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+function formatDateLabel(timestamp) {
+
+    const messageDate = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isToday =
+        messageDate.toDateString() === today.toDateString();
+
+    const isYesterday =
+        messageDate.toDateString() === yesterday.toDateString();
+
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+
+    const day = String(messageDate.getDate()).padStart(2, "0");
+    const month = String(messageDate.getMonth() + 1).padStart(2, "0");
+    const year = messageDate.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+function addDateSeparator(timestamp) {
+
+    const separator = document.createElement("div");
+    separator.className = "date-separator";
+    separator.textContent = formatDateLabel(timestamp);
+
+    chatBox.appendChild(separator);
 }
 
 function loadConversations() {
