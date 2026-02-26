@@ -48,128 +48,158 @@ let messageInput;
 let sendBtn;
 let onlineList;
 let chatWith;    // unread message counters
-const socket = new WebSocket(
-    "ws://localhost:8080/chat?token=" + token
-);
 
-/* CONNECT DEBUG */
-socket.onopen = () => {
-    console.log("WEBSOCKET CONNECTED");
-    socket.send(username);
-};
+let socket;
+let reconnectAttempts = 0;
+let isManuallyClosed = false;
 
-socket.onerror = (e) => {
-    console.log("WEBSOCKET ERROR", e);
-};
+function connectWebSocket() {
 
-socket.onclose = (e) => {
-    console.log("WEBSOCKET CLOSED", e);
-};
+    const connectionStatus = document.getElementById("connectionStatus");
 
+    socket = new WebSocket(
+        "ws://localhost:8080/chat?token=" + token
+    );
 
-/* RECEIVE */
-socket.onmessage = (event) => {
+    socket.onopen = () => {
+        console.log("WEBSOCKET CONNECTED");
+        reconnectAttempts = 0;
+        connectionStatus.textContent = "Connected";
+        socket.send(username);
+    };
+
+    socket.onclose = () => {
+
+        if (isManuallyClosed) return;
+
+        connectionStatus.textContent = "Reconnecting...";
+        attemptReconnect();
+    };
+
+    socket.onerror = () => {
+        socket.close();
+    };
+
+    socket.onmessage = handleSocketMessage;
+}
+
+function attemptReconnect() {
+
+    if (reconnectAttempts >= 5) {
+        document.getElementById("connectionStatus").textContent = "Disconnected";
+        return;
+    }
+
+    reconnectAttempts++;
+
+    setTimeout(() => {
+        console.log("Reconnecting attempt:", reconnectAttempts);
+        connectWebSocket();
+    }, 2000);
+}
+
+function handleSocketMessage(event) {
     const data = event.data;
-    console.log("FROM SERVER:", data);
+	console.log("FROM SERVER:", data);
+
+	    // ONLINE USERS
+		if (data.startsWith("USERS:")) {
+
+		    currentOnlineUsers = data.replace("USERS:", "").split(",");
+
+		    updateOnlineStatus(currentOnlineUsers);
+
+		    // Update header if currently chatting
+		    if (selectedUser) {
+
+		        const chatStatus = document.getElementById("chatStatus");
+		        const chatOnlineDot = document.getElementById("chatOnlineDot");
+
+		        if (currentOnlineUsers.includes(selectedUser)) {
+		            chatStatus.textContent = "Online";
+		            chatOnlineDot.style.display = "block";
+		        } else {
+		            chatStatus.textContent = "Offline";
+		            chatOnlineDot.style.display = "none";
+		        }
+		    }
+
+		    return;
+		}
+		
+		// ✍️ TYPING INDICATOR
+		if (data.startsWith("TYPING|")) {
+
+		    const typingUser = data.split("|")[1];
+
+		    if (typingUser === selectedUser) {
+
+		        const chatStatus = document.getElementById("chatStatus");
+
+		        chatStatus.textContent = "Typing...";
+		        chatStatus.style.fontStyle = "italic";
+
+		        clearTimeout(window.typingHeaderTimeout);
+
+		        window.typingHeaderTimeout = setTimeout(() => {
+
+		            if (currentOnlineUsers.includes(selectedUser)) {
+		                chatStatus.textContent = "Online";
+		            } else {
+		                chatStatus.textContent = "Offline";
+		            }
+
+		            chatStatus.style.fontStyle = "normal";
+
+		        }, 1500);
+		    }
+
+		    return;
+		}
+		
+		// 👁️ SEEN RECEIPT
+		if (data.startsWith("SEEN|")) {
+
+		    const seenByUser = data.split("|")[1];
+
+		    if (seenByUser === selectedUser) {
+		        showSeenIndicator();
+		    }
+
+		    return;
+		}
 
 
-    // ONLINE USERS
-	if (data.startsWith("USERS:")) {
+	    // PRIVATE MESSAGE
+		if (data.startsWith("PRIVATE|")) {
 
-	    currentOnlineUsers = data.replace("USERS:", "").split(",");
+		    const [, from, to, text, time] = data.split("|");
+		    const otherUser = from === username ? to : from;
 
-	    updateOnlineStatus(currentOnlineUsers);
+		    if (!chatStore[otherUser]) {
+		        chatStore[otherUser] = [];
+		    }
 
-	    // Update header if currently chatting
-	    if (selectedUser) {
+		    chatStore[otherUser].push({ from, text, time });
 
-	        const chatStatus = document.getElementById("chatStatus");
-	        const chatOnlineDot = document.getElementById("chatOnlineDot");
+		    if (selectedUser === otherUser) {
 
-	        if (currentOnlineUsers.includes(selectedUser)) {
-	            chatStatus.textContent = "Online";
-	            chatOnlineDot.style.display = "block";
-	        } else {
-	            chatStatus.textContent = "Offline";
-	            chatOnlineDot.style.display = "none";
-	        }
-	    }
+		        addMessage(from === username, text, time);
 
-	    return;
-	}
+		        // Clear unread when viewing
+		        unread[otherUser] = 0;
+
+		    } else {
+
+		        unread[otherUser] = (unread[otherUser] || 0) + 1;
+		    }
+
+		    loadConversations(); // re-render sorted list
+
+		    return;
+		}
 	
-	// ✍️ TYPING INDICATOR
-	if (data.startsWith("TYPING|")) {
-
-	    const typingUser = data.split("|")[1];
-
-	    if (typingUser === selectedUser) {
-
-	        const chatStatus = document.getElementById("chatStatus");
-
-	        chatStatus.textContent = "Typing...";
-	        chatStatus.style.fontStyle = "italic";
-
-	        clearTimeout(window.typingHeaderTimeout);
-
-	        window.typingHeaderTimeout = setTimeout(() => {
-
-	            if (currentOnlineUsers.includes(selectedUser)) {
-	                chatStatus.textContent = "Online";
-	            } else {
-	                chatStatus.textContent = "Offline";
-	            }
-
-	            chatStatus.style.fontStyle = "normal";
-
-	        }, 1500);
-	    }
-
-	    return;
-	}
-	
-	// 👁️ SEEN RECEIPT
-	if (data.startsWith("SEEN|")) {
-
-	    const seenByUser = data.split("|")[1];
-
-	    if (seenByUser === selectedUser) {
-	        showSeenIndicator();
-	    }
-
-	    return;
-	}
-
-
-    // PRIVATE MESSAGE
-	if (data.startsWith("PRIVATE|")) {
-
-	    const [, from, to, text, time] = data.split("|");
-	    const otherUser = from === username ? to : from;
-
-	    if (!chatStore[otherUser]) {
-	        chatStore[otherUser] = [];
-	    }
-
-	    chatStore[otherUser].push({ from, text, time });
-
-	    if (selectedUser === otherUser) {
-
-	        addMessage(from === username, text, time);
-
-	        // Clear unread when viewing
-	        unread[otherUser] = 0;
-
-	    } else {
-
-	        unread[otherUser] = (unread[otherUser] || 0) + 1;
-	    }
-
-	    loadConversations(); // re-render sorted list
-
-	    return;
-	}
-};
+}
 
 /* SEND */
 
@@ -292,22 +322,25 @@ function loadConversation(user1, user2) {
 
     console.log("LOADING CONVERSATION:", user1, user2);
 
-	apiFetch(`/api/messages/${user1}/${user2}`)
+    apiFetch(`/api/messages/${user1}/${user2}`)
     .then(res => res.json())
     .then(messages => {
 
-        console.log("MESSAGES RECEIVED:", messages);
+        if (!Array.isArray(messages)) {
+            throw new Error("Invalid response");
+        }
 
         chatBox.innerHTML = "";
 
         messages.forEach(msg => {
             const isMe = msg.sender === username;
-			addMessage(isMe, msg.content, formatTime(msg.timestamp), msg.id);
+            addMessage(isMe, msg.content, formatTime(msg.timestamp), msg.id);
         });
 
     })
     .catch(err => {
         console.error("Failed to load conversation", err);
+        showToast("Failed to load messages", "error");
     });
 }
 
@@ -513,6 +546,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	loadConversations();
 	loadAllUsers();
 	attachUIEvents();
+	connectWebSocket();
 	
 	const hamburger = document.getElementById("hamburger");
 	const sidePanel = document.getElementById("sidePanel");
@@ -673,6 +707,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function updateBlockButton() {
+
     const btn = document.getElementById("blockUserBtn");
 
     if (!selectedUser) {
@@ -680,13 +715,27 @@ function updateBlockButton() {
         return;
     }
 
-    btn.style.display = "inline-block";
+    // Hide button until we confirm status
+    btn.style.display = "none";
 
-	apiFetch(`/api/users/is-blocked/${username}/${selectedUser}`)
-    .then(res => res.json())
-    .then(data => {
-        btn.textContent = data.blocked ? "Unblock" : "Block";
-    });
+    apiFetch(`/api/users/is-blocked/${username}/${selectedUser}`)
+        .then(res => res.json())
+        .then(data => {
+
+            if (typeof data.blocked !== "boolean") {
+                throw new Error("Invalid block response");
+            }
+
+            btn.textContent = data.blocked ? "Unblock" : "Block";
+            btn.style.display = "inline-block";
+        })
+        .catch(err => {
+            console.error("Block status check failed:", err);
+
+            // Hide button safely if backend fails
+            btn.textContent = "";
+            btn.style.display = "none";
+        });
 }
 
 function unblockUser(user) {

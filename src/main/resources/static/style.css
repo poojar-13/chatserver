@@ -975,3 +975,9 @@ body {
 .unread-name {
   font-weight: 600;
 }
+
+.connection-status {
+  font-size: 11px;
+  color: #a0a4b8;
+  margin-top: 2px;
+}
