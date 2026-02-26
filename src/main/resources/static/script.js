@@ -218,9 +218,19 @@ function addMessage(isMe, text, time, id) {
 	        showMessageMenu(id, msg);
 	    };
 	}
+	
+	const lastMessage = chatBox.lastElementChild;
 
+	if (lastMessage && lastMessage.classList.contains(isMe ? "me" : "other")) {
+	    msg.style.marginTop = "2px";
+	} else {
+	    msg.style.marginTop = "8px";
+	}
     chatBox.appendChild(msg);
-    chatBox.scrollTop = chatBox.scrollHeight;
+	chatBox.scrollTo({
+	    top: chatBox.scrollHeight,
+	    behavior: "smooth"
+	});
 }
 
 function renderChat(user) {
@@ -393,6 +403,11 @@ function renderConversationList(conversations) {
         li.onclick = () => {
 			unread[user] = 0;
             selectedUser = user;
+			document.querySelectorAll("#onlineList li").forEach(item =>
+			    item.classList.remove("active")
+			);
+
+			li.classList.add("active");
             chatWith.textContent = user;
 			const chatAvatar = document.getElementById("chatAvatar");
 			const chatStatus = document.getElementById("chatStatus");
