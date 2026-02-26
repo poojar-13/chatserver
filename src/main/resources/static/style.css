@@ -159,6 +159,7 @@ body {
 .chat-status {
   font-size: 12px;
   color: #7a7f92;
+  transition: all 0.2s ease;
 }
 
 /* MESSAGES */

@@ -105,7 +105,24 @@ socket.onmessage = (event) => {
 
 	    if (typingUser === selectedUser) {
 
-	        showTypingIndicator(typingUser);
+	        const chatStatus = document.getElementById("chatStatus");
+
+	        chatStatus.textContent = "Typing...";
+	        chatStatus.style.fontStyle = "italic";
+
+	        clearTimeout(window.typingHeaderTimeout);
+
+	        window.typingHeaderTimeout = setTimeout(() => {
+
+	            if (currentOnlineUsers.includes(selectedUser)) {
+	                chatStatus.textContent = "Online";
+	            } else {
+	                chatStatus.textContent = "Offline";
+	            }
+
+	            chatStatus.style.fontStyle = "normal";
+
+	        }, 1500);
 	    }
 
 	    return;
@@ -679,28 +696,6 @@ function unblockUser(user) {
     });
 }
 
-function showTypingIndicator(user) {
-
-    let typingDiv = document.getElementById("typingIndicator");
-
-    if (!typingDiv) {
-        typingDiv = document.createElement("div");
-        typingDiv.id = "typingIndicator";
-        typingDiv.style.fontSize = "12px";
-        typingDiv.style.opacity = "0.6";
-        typingDiv.style.margin = "6px 18px";
-        typingDiv.style.fontStyle = "italic";
-        document.querySelector(".chat-container").appendChild(typingDiv);
-    }
-
-    typingDiv.textContent = user + " is typing...";
-
-    clearTimeout(window.typingTimeout);
-
-    window.typingTimeout = setTimeout(() => {
-        typingDiv.textContent = "";
-    }, 1500);
-}
 
 function showSeenIndicator() {
 
