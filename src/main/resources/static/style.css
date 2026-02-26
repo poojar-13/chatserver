@@ -981,3 +981,11 @@ body {
   color: #a0a4b8;
   margin-top: 2px;
 }
+
+.connection-banner {
+  text-align: center;
+  font-size: 12px;
+  color: #7a7f92;
+  margin: 10px 0;
+  opacity: 0.8;
+}

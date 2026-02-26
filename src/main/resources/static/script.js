@@ -63,8 +63,13 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         console.log("WEBSOCKET CONNECTED");
+		
+		if (reconnectAttempts > 0) {
+		    hideConnectionBanner();
+		    showToast("Reconnected successfully", "success");
+		}
+		
         reconnectAttempts = 0;
-        connectionStatus.textContent = "Connected";
         socket.send(username);
     };
 
@@ -72,7 +77,7 @@ function connectWebSocket() {
 
         if (isManuallyClosed) return;
 
-        connectionStatus.textContent = "Reconnecting...";
+		showConnectionBanner("Connection lost. Reconnecting...");
         attemptReconnect();
     };
 
@@ -946,6 +951,25 @@ function attachUIEvents() {
             }
         });
     });
+}
+
+function showConnectionBanner(text) {
+
+    let banner = document.getElementById("connectionBanner");
+
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "connectionBanner";
+        banner.className = "connection-banner";
+        document.getElementById("chat-box").appendChild(banner);
+    }
+
+    banner.textContent = text;
+}
+
+function hideConnectionBanner() {
+    const banner = document.getElementById("connectionBanner");
+    if (banner) banner.remove();
 }
 
 function showToast(message, type = "success") {
