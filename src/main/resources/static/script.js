@@ -43,6 +43,7 @@ function apiFetch(url, options = {}) {
 let selectedUser = null;
 const chatStore = {};   // per-user chat history
 const unread = {}; 
+const deliveredMessages = new Set();
 let chatBox;
 let messageInput;
 let sendBtn;
@@ -173,37 +174,72 @@ function handleSocketMessage(event) {
 
 		    return;
 		}
+		
+		// 📬 DELIVERED RECEIPT
+		if (data.startsWith("DELIVERED|")) {
+
+		    const messageId = data.split("|")[1];
+
+		    deliveredMessages.add(messageId);
+
+		    const msgElement = document.querySelector(
+		        `[data-id='${messageId}']`
+		    );
+
+		    if (msgElement) {
+		        const statusSpan = msgElement.querySelector(".status");
+		        if (statusSpan) {
+		            statusSpan.textContent = "✓✓";
+		        }
+		    }
+
+		    return;
+		}
 
 
 	    // PRIVATE MESSAGE
 		if (data.startsWith("PRIVATE|")) {
 
-		    const [, from, to, text, time] = data.split("|");
+		    const parts = data.split("|");
+
+		    const messageId = parts[1];
+		    const from = parts[2];
+		    const to = parts[3];
+		    const text = parts[4];
+		    const time = parts[5];
+
 		    const otherUser = from === username ? to : from;
 
 		    if (!chatStore[otherUser]) {
 		        chatStore[otherUser] = [];
 		    }
 
-		    chatStore[otherUser].push({ from, text, time });
+		    chatStore[otherUser].push({
+		        id: messageId,
+		        from,
+		        text,
+		        time
+		    });
 
 		    if (selectedUser === otherUser) {
 
-		        addMessage(from === username, text, time);
+		        addMessage(
+		            from === username,
+		            text,
+		            time,
+		            messageId
+		        );
 
-		        // Clear unread when viewing
 		        unread[otherUser] = 0;
 
 		    } else {
-
 		        unread[otherUser] = (unread[otherUser] || 0) + 1;
 		    }
 
-		    loadConversations(); // re-render sorted list
+		    loadConversations();
 
 		    return;
 		}
-	
 }
 
 /* SEND */
@@ -214,7 +250,11 @@ function sendMessage() {
 	if (!selectedUser) return;
 
 	if (!msg) return;
-
+	
+	if (messageInput.value.length > 1000) {
+	    showToast("Message too long (max 1000 characters)", "error");
+	    return;
+	}
 	socket.send("DM:" + selectedUser + ":" + msg);
 	messageInput.value = "";
 }
@@ -222,7 +262,7 @@ function sendMessage() {
 
 
 /* MESSAGES */
-function addMessage(isMe, text, time, id) {
+function addMessage(isMe, text, time, id, status = "SENT") {
 
     const msg = document.createElement("div");
     msg.className = "message " + (isMe ? "me" : "other");
@@ -231,13 +271,9 @@ function addMessage(isMe, text, time, id) {
         msg.dataset.id = id;
     }
 
-    msg.innerHTML = `
-        <div class="bubble">
-            <span class="message-text">${text}</span>
-            <span class="timestamp">${time}</span>
-        </div>
-    `;
-
+	msg.innerHTML = `<div class="bubble"><span class="message-text">${text}</span>${isMe ? `<span class="meta"><span class="time">${time}</span><span class="status ${status === "READ" ? "read" : ""}">${status === "DELIVERED" || status === "READ" ? "✓✓" : "✓"}</span></span>` : `<span class="meta"><span class="time">${time}</span></span>`}</div>`;
+	
+	
     // 🗑 Add delete button only for my messages
 	if (isMe && id) {
 
@@ -254,29 +290,32 @@ function addMessage(isMe, text, time, id) {
 	    };
 	}
 	
-	const lastMessage = chatBox.lastElementChild;
-
-	if (lastMessage && lastMessage.classList.contains(isMe ? "me" : "other")) {
-	    msg.style.marginTop = "2px";
-	} else {
-	    msg.style.marginTop = "8px";
-	}
     chatBox.appendChild(msg);
+	if (isMe && id && deliveredMessages.has(id)) {
+	    const statusSpan = msg.querySelector(".status");
+	    if (statusSpan) {
+	        statusSpan.textContent = "✓✓";
+	    }
+	}
 	chatBox.scrollTo({
 	    top: chatBox.scrollHeight,
 	    behavior: "smooth"
 	});
 }
 
+
 function renderChat(user) {
     chatBox.innerHTML = "";
 
     (chatStore[user] || []).forEach(msg => {
-        addMessage(msg.from === username, msg.text, msg.time);
+        addMessage(
+            msg.from === username,
+            msg.text,
+            msg.time,
+            msg.id,
+            msg.status
+        );
     });
-
-    unread[user] = 0;
-    updateUsersListUI();
 }
 
 function updateUsersListUI() {
@@ -350,12 +389,13 @@ function loadConversation(user1, user2) {
 
 		    const isMe = msg.sender === username;
 
-		    addMessage(
-		        isMe,
-		        msg.content,
-		        formatTime(msg.timestamp),
-		        msg.id
-		    );
+			addMessage(
+			    isMe,
+			    msg.content,
+			    formatTime(msg.timestamp),
+			    msg.id,
+			    msg.status
+			);
 		});
 
     })

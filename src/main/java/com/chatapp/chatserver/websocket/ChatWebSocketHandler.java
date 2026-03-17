@@ -98,6 +98,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      // PRIVATE MESSAGE
      // PRIVATE MESSAGE
         if (payload.startsWith("DM:")) {
+
             String[] parts = payload.split(":", 3);
             if (parts.length == 3) {
 
@@ -105,24 +106,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 String text = parts[2];
                 String fromUser = username;
 
-                // 🔴 ADD THIS BLOCK CHECK RIGHT HERE
                 boolean isBlocked =
                         blockedUserRepository.existsByBlockerAndBlocked(fromUser, toUser)
                         || blockedUserRepository.existsByBlockerAndBlocked(toUser, fromUser);
 
                 if (isBlocked) {
                     System.out.println("Message blocked due to block relationship");
-                    return; // 🚫 stop everything
+                    return;
                 }
 
                 String time = java.time.LocalTime.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
 
-                String privateMsg =
-                        "PRIVATE|" + fromUser + "|" + toUser + "|" + text + "|" + time;
-
-                String key = getChatKey(fromUser, toUser);
-
+                // 1️⃣ Create message entity
                 Message dbMessage = new Message(
                         fromUser,
                         toUser,
@@ -130,15 +126,44 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         LocalDateTime.now()
                 );
 
-                System.out.println("Saving message to DB: " + text);
+                // 2️⃣ Save message (status = SENT)
+                dbMessage = messageRepository.save(dbMessage);
 
-                messageRepository.save(dbMessage);
+                // 3️⃣ Now build private message WITH ID
+                String privateMsg =
+                        "PRIVATE|" + dbMessage.getId() + "|" +
+                        fromUser + "|" +
+                        toUser + "|" +
+                        text + "|" +
+                        time;
 
+                // 4️⃣ Check if receiver is online
+                boolean receiverOnline = users.containsValue(toUser);
+
+                if (receiverOnline) {
+
+                    dbMessage.setStatus("DELIVERED");
+                    messageRepository.save(dbMessage);
+
+                    // Notify sender
+                    for (Map.Entry<WebSocketSession, String> entry : users.entrySet()) {
+
+                        if (entry.getValue().equals(fromUser)
+                                && entry.getKey().isOpen()) {
+
+                            entry.getKey().sendMessage(
+                                new TextMessage("DELIVERED|" + dbMessage.getId())
+                            );
+                        }
+                    }
+                }
+
+                // 5️⃣ Send message to both users
                 sendPrivate(fromUser, toUser, privateMsg);
             }
+
             return;
         }
-
 
         
     }

@@ -15,6 +15,7 @@ public class Message {
 
     private String receiver;
 
+    @Column(length = 5000)
     private String content;
 
     private LocalDateTime timestamp;
