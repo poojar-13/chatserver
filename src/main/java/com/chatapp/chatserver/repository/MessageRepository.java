@@ -16,6 +16,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 	        String sender2,
 	        String receiver2
 	);
+	
+	List<Message> findByReceiverAndStatus(String receiver, String status);
 
 	@Query("""
 		    SELECT DISTINCT 

@@ -3,6 +3,7 @@ import org.springframework.stereotype.Component;
 import com.chatapp.chatserver.model.Message;
 import com.chatapp.chatserver.repository.MessageRepository;
 import java.time.LocalDateTime;
+import java.util.List; 
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.chatapp.chatserver.repository.BlockedUserRepository;
@@ -32,7 +33,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 
-        // Username was set during JWT handshake
         String username = (String) session.getAttributes().get("username");
 
         if (username == null) {
@@ -43,6 +43,25 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         users.put(session, username);
         broadcast(username + " joined the chat");
         broadcastUserList();
+
+        // ← ADD THIS: mark all undelivered messages as delivered
+        List<Message> undelivered = messageRepository
+            .findByReceiverAndStatus(username, "SENT");
+
+        for (Message msg : undelivered) {
+            msg.setStatus("DELIVERED");
+            messageRepository.save(msg);
+
+            // Notify the sender
+            for (Map.Entry<WebSocketSession, String> entry : users.entrySet()) {
+                if (entry.getValue().equals(msg.getSender()) 
+                        && entry.getKey().isOpen()) {
+                    entry.getKey().sendMessage(
+                        new TextMessage("DELIVERED|" + msg.getId())
+                    );
+                }
+            }
+        }
     }
 
 
@@ -79,21 +98,35 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String fromUser = username;
             String toUser = payload.split(":")[1];
 
+            // Mark BOTH sent and delivered messages as READ
+            List<Message> delivered = messageRepository
+                .findByReceiverAndStatus(fromUser, "DELIVERED");
+
+            List<Message> sent = messageRepository
+                .findByReceiverAndStatus(fromUser, "SENT");
+
+            List<Message> allUnread = new java.util.ArrayList<>();
+            allUnread.addAll(delivered);
+            allUnread.addAll(sent);
+
+            for (Message msg : allUnread) {
+                if (msg.getSender().equals(toUser)) {
+                    msg.setStatus("READ");
+                    messageRepository.save(msg);
+                }
+            }
+
             String seenMsg = "SEEN|" + fromUser;
+            System.out.println("SENDING SEEN TO: " + toUser + " | msg: " + seenMsg);
 
             for (Map.Entry<WebSocketSession, String> entry : users.entrySet()) {
-
-                String connectedUser = entry.getValue();
-                WebSocketSession userSession = entry.getKey();
-
-                if (connectedUser.equals(toUser) && userSession.isOpen()) {
-                    userSession.sendMessage(new TextMessage(seenMsg));
+                if (entry.getValue().equals(toUser) && entry.getKey().isOpen()) {
+                    entry.getKey().sendMessage(new TextMessage(seenMsg));
                 }
             }
 
             return;
         }
-
 
      // PRIVATE MESSAGE
      // PRIVATE MESSAGE

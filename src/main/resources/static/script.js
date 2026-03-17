@@ -167,13 +167,16 @@ function handleSocketMessage(event) {
 		
 		// 👁️ SEEN RECEIPT
 		if (data.startsWith("SEEN|")) {
-
 		    const seenByUser = data.split("|")[1];
 
 		    if (seenByUser === selectedUser) {
-		        showSeenIndicator();
+		        // Turn all my double ticks blue
+		        const myMessages = document.querySelectorAll(".message.me .status");
+		        myMessages.forEach(span => {
+		            span.textContent = "✓✓";
+		            span.classList.add("read");
+		        });
 		    }
-
 		    return;
 		}
 		
@@ -562,6 +565,7 @@ function renderConversationList(conversations) {
 			sendBtn.disabled = false;
             messageInput.focus();
             loadConversation(username, user);
+			console.log("SENDING SEEN ON CLICK TO:", user);  // ← ADD THIS LINE
             socket.send("SEEN:" + user);
 			updateBlockButton();
         };
@@ -909,21 +913,16 @@ function unblockUser(user) {
 
 
 function showSeenIndicator() {
+    // Find all my messages and mark last one as read
+    const myMessages = document.querySelectorAll(".message.me");
+    if (myMessages.length === 0) return;
 
-    let seenDiv = document.getElementById("seenIndicator");
-
-    if (!seenDiv) {
-        seenDiv = document.createElement("div");
-        seenDiv.id = "seenIndicator";
-        seenDiv.style.fontSize = "11px";
-        seenDiv.style.opacity = "0.6";
-        seenDiv.style.marginRight = "20px";
-        seenDiv.style.textAlign = "right";
-        seenDiv.style.marginBottom = "8px";
-        document.getElementById("chat-box").appendChild(seenDiv);
+    const lastMsg = myMessages[myMessages.length - 1];
+    const statusSpan = lastMsg.querySelector(".status");
+    if (statusSpan) {
+        statusSpan.textContent = "✓✓";
+        statusSpan.classList.add("read");
     }
-
-    seenDiv.textContent = "Seen";
 }
 
 let messageToDeleteId = null;
