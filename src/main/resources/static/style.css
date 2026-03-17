@@ -198,7 +198,7 @@ body {
   display: inline-block;
   padding: 7px 10px 7px 10px;  /* ← change 5px bottom to 7px */
   border-radius: 10px; 
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.4;
   max-width: 65%;
   min-width: 0;
@@ -220,16 +220,26 @@ body {
   white-space: nowrap;
   vertical-align: bottom;
   line-height: 1;
+  gap: 3px;
 }
 
 .time {
   font-size: 10px;
   vertical-align: bottom;
+  margin-right: 3px;   /* ← this is the spacebar gap */
 }
 
 .status {
-  font-size: 10px;
+  font-size: 11px;
   vertical-align: bottom;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;        /* ← makes tick thicker/bolder */
+  letter-spacing: -1px;   /* ← brings double tick closer together nicely */
+}
+
+.status.read {
+  color: #5ddcf0;
+  font-weight: 600;
 }
 
 .message.me .bubble {
@@ -951,10 +961,6 @@ body {
   opacity: 0.6;
 }
 
-
-.status.read {
-  color: #4FC3F7; /* blue tick later */
-}
 
 .right-side {
   display: flex;
