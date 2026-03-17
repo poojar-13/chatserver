@@ -16,6 +16,11 @@ function apiFetch(url, options = {}) {
         "Authorization": "Bearer " + token
     };
 
+    // Don't set Content-Type for FormData - browser does it automatically
+    if (!(options.body instanceof FormData)) {
+        defaultHeaders["Content-Type"] = "application/json";
+    }
+
     options.headers = {
         ...defaultHeaders,
         ...options.headers
@@ -23,15 +28,12 @@ function apiFetch(url, options = {}) {
 
     return fetch(url, options)
         .then(res => {
-
-			if (res.status === 401) {
-
-			    localStorage.clear();  
-			    sessionStorage.setItem("sessionExpired", "true");
-			    window.location.href = "login.html";
-
-			    return Promise.reject("Unauthorized");
-			}
+            if (res.status === 401) {
+                localStorage.clear();
+                sessionStorage.setItem("sessionExpired", "true");
+                window.location.href = "login.html";
+                return Promise.reject("Unauthorized");
+            }
             return res;
         })
         .catch(err => {
@@ -199,7 +201,6 @@ function handleSocketMessage(event) {
 
 	    // PRIVATE MESSAGE
 		if (data.startsWith("PRIVATE|")) {
-
 		    const parts = data.split("|");
 
 		    const messageId = parts[1];
@@ -207,37 +208,26 @@ function handleSocketMessage(event) {
 		    const to = parts[3];
 		    const text = parts[4];
 		    const time = parts[5];
+		    const fileUrl = parts.length > 6 ? parts[6] : "";
+		    const fileType = parts.length > 7 ? parts[7] : "";
+		    const fileName = parts.length > 8 ? parts[8] : "";
+
+		    console.log("FILE DEBUG:", fileUrl, fileType, fileName);
 
 		    const otherUser = from === username ? to : from;
 
-		    if (!chatStore[otherUser]) {
-		        chatStore[otherUser] = [];
-		    }
+		    if (!chatStore[otherUser]) chatStore[otherUser] = [];
 
-		    chatStore[otherUser].push({
-		        id: messageId,
-		        from,
-		        text,
-		        time
-		    });
+		    chatStore[otherUser].push({ id: messageId, from, text, time, fileUrl, fileType, fileName });
 
 		    if (selectedUser === otherUser) {
-
-		        addMessage(
-		            from === username,
-		            text,
-		            time,
-		            messageId
-		        );
-
+		        addMessage(from === username, text, time, messageId, "SENT", fileUrl, fileType, fileName);
 		        unread[otherUser] = 0;
-
 		    } else {
 		        unread[otherUser] = (unread[otherUser] || 0) + 1;
 		    }
 
 		    loadConversations();
-
 		    return;
 		}
 }
@@ -262,18 +252,30 @@ function sendMessage() {
 
 
 /* MESSAGES */
-function addMessage(isMe, text, time, id, status = "SENT") {
+function addMessage(isMe, text, time, id, status = "SENT", fileUrl = "", fileType = "", fileName = "") {
 
     const msg = document.createElement("div");
     msg.className = "message " + (isMe ? "me" : "other");
+    if (id) msg.dataset.id = id;
 
-    if (id) {
-        msg.dataset.id = id;
+    let contentHtml = "";
+
+    if (fileUrl) {
+        if (fileType.startsWith("image/")) {
+            contentHtml = `<img src="${fileUrl}" class="msg-image" onclick="window.open('${fileUrl}')" />`;
+        } else if (fileType.startsWith("video/")) {
+            contentHtml = `<video src="${fileUrl}" class="msg-video" controls></video>`;
+        } else {
+            contentHtml = `<a href="${fileUrl}" download="${fileName}" class="msg-file">📄 ${fileName}</a>`;
+        }
     }
 
-	msg.innerHTML = `<div class="bubble"><span class="message-text">${text}</span>${isMe ? `<span class="meta"><span class="time">${time}</span><span class="status ${status === "READ" ? "read" : ""}">${status === "DELIVERED" || status === "READ" ? "✓✓" : "✓"}</span></span>` : `<span class="meta"><span class="time">${time}</span></span>`}</div>`;
-	
-	
+    if (text) {
+        contentHtml += `<span class="message-text">${text}</span>`;
+    }
+
+    msg.innerHTML = `<div class="bubble">${contentHtml}<span class="meta"><span class="time">${time}</span>${isMe ? `<span class="status ${status === "READ" ? "read" : ""}">${status === "DELIVERED" || status === "READ" ? "✓✓" : "✓"}</span>` : ``}</span></div>`;
+
     // 🗑 Add delete button only for my messages
 	if (isMe && id) {
 
@@ -313,7 +315,10 @@ function renderChat(user) {
             msg.text,
             msg.time,
             msg.id,
-            msg.status
+            msg.status,
+            msg.fileUrl || "",
+            msg.fileType || "",
+            msg.fileName || ""
         );
     });
 }
@@ -394,7 +399,10 @@ function loadConversation(user1, user2) {
 			    msg.content,
 			    formatTime(msg.timestamp),
 			    msg.id,
-			    msg.status
+			    msg.status,
+			    msg.fileUrl || "",
+			    msg.fileType || "",
+			    msg.fileName || ""
 			);
 		});
 
@@ -589,6 +597,52 @@ function loadAllUsers() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+	
+	const attachBtn = document.getElementById("attachBtn");
+	const fileInput = document.getElementById("fileInput");
+
+	attachBtn.addEventListener("click", () => {
+	    if (!selectedUser) {
+	        showToast("Select a chat first", "error");
+	        return;
+	    }
+	    fileInput.click();
+	});
+
+	fileInput.addEventListener("change", () => {
+	    const file = fileInput.files[0];
+	    if (!file) return;
+
+	    if (file.size > 10 * 1024 * 1024) {
+	        showToast("File too large (max 10MB)", "error");
+	        fileInput.value = "";
+	        return;
+	    }
+
+	    const formData = new FormData();
+	    formData.append("file", file);
+
+	    showToast("Uploading...", "success");
+
+		apiFetch("/api/files/upload", {
+		    method: "POST",
+		    body: formData
+		    // NO headers here - browser sets multipart boundary automatically
+		})
+		
+	    .then(res => res.json())
+	    .then(data => {
+	        if (data.error) {
+	            showToast("Upload failed", "error");
+	            return;
+	        }
+	        // Send as file message via WebSocket
+	        socket.send(`DM:${selectedUser}:FILE:${data.url}|${data.type}|${data.name}|`);
+	        showToast("File sent!", "success");
+	    })
+	    .catch(() => showToast("Upload failed", "error"))
+	    .finally(() => fileInput.value = "");
+	});
 	
 	
 	//block button

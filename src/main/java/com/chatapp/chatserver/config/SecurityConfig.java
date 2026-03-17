@@ -33,6 +33,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/chat/**").permitAll()
+                .requestMatchers("/api/files/**").permitAll()
                 .requestMatchers("/**/*.html",
                                  "/**/*.css",
                                  "/**/*.js",

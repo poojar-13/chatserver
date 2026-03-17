@@ -21,6 +21,20 @@ public class Message {
     private LocalDateTime timestamp;
     @Column(nullable = false)
     private String status;
+    
+    private String fileUrl;
+    private String fileType;
+    private String fileName;
+
+    // add getters and setters
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
+
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
 
     public Message() {}
 

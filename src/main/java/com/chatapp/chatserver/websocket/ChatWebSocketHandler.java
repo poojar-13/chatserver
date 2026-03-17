@@ -99,43 +99,52 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      // PRIVATE MESSAGE
         if (payload.startsWith("DM:")) {
 
-            String[] parts = payload.split(":", 3);
-            if (parts.length == 3) {
+        	String[] parts = payload.split(":", 3);
+        	if (parts.length == 3) {
+        	    String toUser = parts[1];
+        	    String msgBody = parts[2];
+        	    String fromUser = username;
 
-                String toUser = parts[1];
-                String text = parts[2];
-                String fromUser = username;
+        	    // Parse optional file metadata appended as JSON
+        	    String text = msgBody;
+        	    String fileUrl = null;
+        	    String fileType = null;
+        	    String fileName = null;
 
-                boolean isBlocked =
-                        blockedUserRepository.existsByBlockerAndBlocked(fromUser, toUser)
-                        || blockedUserRepository.existsByBlockerAndBlocked(toUser, fromUser);
+        	    if (msgBody.startsWith("FILE:")) {
+        	        // FORMAT: FILE:url|type|name|caption
+        	        String fileData = msgBody.substring(5);
+        	        String[] fileParts = fileData.split("\\|", 4);
+        	        fileUrl = fileParts.length > 0 ? fileParts[0] : "";
+        	        fileType = fileParts.length > 1 ? fileParts[1] : "";
+        	        fileName = fileParts.length > 2 ? fileParts[2] : "";
+        	        text = fileParts.length > 3 ? fileParts[3] : "";
+        	    }
 
-                if (isBlocked) {
-                    System.out.println("Message blocked due to block relationship");
-                    return;
-                }
+        	    boolean isBlocked =
+        	        blockedUserRepository.existsByBlockerAndBlocked(fromUser, toUser)
+        	        || blockedUserRepository.existsByBlockerAndBlocked(toUser, fromUser);
 
-                String time = java.time.LocalTime.now()
-                        .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
+        	    if (isBlocked) return;
 
-                // 1️⃣ Create message entity
-                Message dbMessage = new Message(
-                        fromUser,
-                        toUser,
-                        text,
-                        LocalDateTime.now()
-                );
+        	    String time = java.time.LocalTime.now()
+        	        .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
 
-                // 2️⃣ Save message (status = SENT)
-                dbMessage = messageRepository.save(dbMessage);
+        	    Message dbMessage = new Message(fromUser, toUser, text, LocalDateTime.now());
+        	    dbMessage.setFileUrl(fileUrl);
+        	    dbMessage.setFileType(fileType);
+        	    dbMessage.setFileName(fileName);
+        	    dbMessage = messageRepository.save(dbMessage);
 
-                // 3️⃣ Now build private message WITH ID
-                String privateMsg =
-                        "PRIVATE|" + dbMessage.getId() + "|" +
-                        fromUser + "|" +
-                        toUser + "|" +
-                        text + "|" +
-                        time;
+        	    String privateMsg =
+        	        "PRIVATE|" + dbMessage.getId() + "|" +
+        	        fromUser + "|" + toUser + "|" +
+        	        (text != null ? text : "") + "|" +
+        	        time + "|" +
+        	        (fileUrl != null ? fileUrl : "") + "|" +
+        	        (fileType != null ? fileType : "") + "|" +
+        	        (fileName != null ? fileName : "");
+
 
                 // 4️⃣ Check if receiver is online
                 boolean receiverOnline = users.containsValue(toUser);
