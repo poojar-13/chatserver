@@ -132,67 +132,82 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
      // PRIVATE MESSAGE
         if (payload.startsWith("DM:")) {
 
-        	String[] parts = payload.split(":", 3);
-        	if (parts.length == 3) {
-        	    String toUser = parts[1];
-        	    String msgBody = parts[2];
-        	    String fromUser = username;
+            String[] parts = payload.split(":", 3);
+            if (parts.length == 3) {
+                String toUser = parts[1];
+                String msgBody = parts[2];
+                String fromUser = username;
 
-        	    // Parse optional file metadata appended as JSON
-        	    String text = msgBody;
-        	    String fileUrl = null;
-        	    String fileType = null;
-        	    String fileName = null;
+                String text = msgBody;
+                String fileUrl = null;
+                String fileType = null;
+                String fileName = null;
 
-        	    if (msgBody.startsWith("FILE:")) {
-        	        // FORMAT: FILE:url|type|name|caption
-        	        String fileData = msgBody.substring(5);
-        	        String[] fileParts = fileData.split("\\|", 4);
-        	        fileUrl = fileParts.length > 0 ? fileParts[0] : "";
-        	        fileType = fileParts.length > 1 ? fileParts[1] : "";
-        	        fileName = fileParts.length > 2 ? fileParts[2] : "";
-        	        text = fileParts.length > 3 ? fileParts[3] : "";
-        	    }
+                if (msgBody.startsWith("FILE:")) {
+                    String fileData = msgBody.substring(5);
+                    String[] fileParts = fileData.split("\\|", 4);
+                    fileUrl = fileParts.length > 0 ? fileParts[0] : "";
+                    fileType = fileParts.length > 1 ? fileParts[1] : "";
+                    fileName = fileParts.length > 2 ? fileParts[2] : "";
+                    text = fileParts.length > 3 ? fileParts[3] : "";
+                }
 
-        	    boolean isBlocked =
-        	        blockedUserRepository.existsByBlockerAndBlocked(fromUser, toUser)
-        	        || blockedUserRepository.existsByBlockerAndBlocked(toUser, fromUser);
+                String replyToId = null;
+                String replyToContent = null;
+                String replyToSender = null;
 
-        	    if (isBlocked) return;
+                if (text != null && text.startsWith("REPLY:")) {
+                    String replyData = text.substring(6);
+                    String[] replyParts = replyData.split("\\|", 4);
+                    replyToId = replyParts.length > 0 ? replyParts[0] : null;
+                    replyToSender = replyParts.length > 1 ? replyParts[1] : null;
+                    replyToContent = replyParts.length > 2 ? replyParts[2] : null;
+                    text = replyParts.length > 3 ? replyParts[3] : "";
+                }
 
-        	    String time = java.time.LocalTime.now()
-        	        .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
+                boolean isBlocked =
+                    blockedUserRepository.existsByBlockerAndBlocked(fromUser, toUser)
+                    || blockedUserRepository.existsByBlockerAndBlocked(toUser, fromUser);
 
-        	    Message dbMessage = new Message(fromUser, toUser, text, LocalDateTime.now());
-        	    dbMessage.setFileUrl(fileUrl);
-        	    dbMessage.setFileType(fileType);
-        	    dbMessage.setFileName(fileName);
-        	    dbMessage = messageRepository.save(dbMessage);
+                if (isBlocked) return;
 
-        	    String privateMsg =
-        	        "PRIVATE|" + dbMessage.getId() + "|" +
-        	        fromUser + "|" + toUser + "|" +
-        	        (text != null ? text : "") + "|" +
-        	        time + "|" +
-        	        (fileUrl != null ? fileUrl : "") + "|" +
-        	        (fileType != null ? fileType : "") + "|" +
-        	        (fileName != null ? fileName : "");
+                String time = java.time.LocalTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
 
+                Message dbMessage = new Message(fromUser, toUser, text, LocalDateTime.now());
+                dbMessage.setFileUrl(fileUrl);
+                dbMessage.setFileType(fileType);
+                dbMessage.setFileName(fileName);
 
-                // 4️⃣ Check if receiver is online
+                if (replyToId != null) {
+                    try {
+                        dbMessage.setReplyToId(Long.parseLong(replyToId));
+                    } catch (NumberFormatException ignored) {}
+                }
+                dbMessage.setReplyToContent(replyToContent);
+                dbMessage.setReplyToSender(replyToSender);
+                dbMessage = messageRepository.save(dbMessage);
+
+                String privateMsg =
+                    "PRIVATE|" + dbMessage.getId() + "|" +
+                    fromUser + "|" + toUser + "|" +
+                    (text != null ? text : "") + "|" +
+                    time + "|" +
+                    (fileUrl != null ? fileUrl : "") + "|" +
+                    (fileType != null ? fileType : "") + "|" +
+                    (fileName != null ? fileName : "") + "|" +
+                    (replyToId != null ? replyToId : "") + "|" +
+                    (replyToSender != null ? replyToSender : "") + "|" +
+                    (replyToContent != null ? replyToContent : "");
+
                 boolean receiverOnline = users.containsValue(toUser);
 
                 if (receiverOnline) {
-
                     dbMessage.setStatus("DELIVERED");
                     messageRepository.save(dbMessage);
 
-                    // Notify sender
                     for (Map.Entry<WebSocketSession, String> entry : users.entrySet()) {
-
-                        if (entry.getValue().equals(fromUser)
-                                && entry.getKey().isOpen()) {
-
+                        if (entry.getValue().equals(fromUser) && entry.getKey().isOpen()) {
                             entry.getKey().sendMessage(
                                 new TextMessage("DELIVERED|" + dbMessage.getId())
                             );
@@ -200,7 +215,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     }
                 }
 
-                // 5️⃣ Send message to both users
                 sendPrivate(fromUser, toUser, privateMsg);
             }
 

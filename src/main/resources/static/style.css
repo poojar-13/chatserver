@@ -183,7 +183,9 @@ body {
   width: 100%;
   margin: 2px 0;
   align-items: flex-end;
+  position: relative;
 }
+
 
 .message.me {
   justify-content: flex-end;
@@ -257,8 +259,12 @@ body {
   border-radius: 10px;
   border-bottom-left-radius: 4px;
   margin-right: auto;
+  cursor: pointer;
 }
 
+.message.me .bubble:hover .message-dropdown {
+    opacity: 0.6;
+}
 
 .message-content {
   word-break: break-word;
@@ -889,22 +895,29 @@ body {
     background: #f2aeb8 !important;
 }
 
-.message {
-    position: relative;
-}
 
 /* Message popup menu */
 .message-menu {
     position: absolute;
-    right: 10px;
-    top: -5px;
+    z-index: 10;
     background: white;
     border-radius: 12px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.08);
     padding: 6px 0;
     width: 100px;
-    z-index: 10;
+    /* no top value here — set dynamically by JS */
 }
+
+.message.me .message-menu {
+    right: 0;
+    left: auto;
+}
+
+.message.other .message-menu {
+    left: 0;
+    right: auto;
+}
+
 
 .menu-item {
     padding: 8px 12px;
@@ -1128,3 +1141,88 @@ em-emoji-picker {
     height: 380px;
     width: 320px;
 }
+
+/* REPLY PREVIEW BAR */
+.reply-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: #f0f0fa;
+    border-top: 1px solid #e0e0f0;
+    border-left: 3px solid #5B4B8A;
+    gap: 10px;
+}
+
+.reply-preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.reply-preview-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5B4B8A;
+}
+
+.reply-preview-text {
+    font-size: 12px;
+    color: #7a7f92;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cancel-reply-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #8a8fa3;
+    padding: 4px;
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+}
+
+.cancel-reply-btn:hover {
+    color: #5B4B8A;
+}
+
+/* REPLY QUOTE INSIDE BUBBLE */
+.reply-quote {
+    background: rgba(0, 0, 0, 0.1);
+    border-left: 3px solid rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.message.other .reply-quote {
+    background: rgba(91, 75, 138, 0.08);
+    border-left: 3px solid #5B4B8A;
+}
+
+.reply-quote:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.reply-quote-sender {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    opacity: 0.9;
+}
+
+.reply-quote-text {
+    font-size: 11px;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+

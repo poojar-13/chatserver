@@ -3,6 +3,7 @@ let token = localStorage.getItem("jwt");
 let currentOnlineUsers = [];
 let allConversations = [];
 let allUsers = [];
+let replyingTo = null; // { id, sender, text }
 
 console.log("JWT FROM STORAGE:", token);
 
@@ -203,66 +204,87 @@ function handleSocketMessage(event) {
 
 
 	    // PRIVATE MESSAGE
-		if (data.startsWith("PRIVATE|")) {
-		    const parts = data.split("|");
+	if (data.startsWith("PRIVATE|")) {
+	    const parts = data.split("|");
 
-		    const messageId = parts[1];
-		    const from = parts[2];
-		    const to = parts[3];
-		    const text = parts[4];
-		    const time = parts[5];
-		    const fileUrl = parts.length > 6 ? parts[6] : "";
-		    const fileType = parts.length > 7 ? parts[7] : "";
-		    const fileName = parts.length > 8 ? parts[8] : "";
+	    const messageId = parts[1];
+	    const from = parts[2];
+	    const to = parts[3];
+	    const text = parts[4];
+	    const time = parts[5];
+	    const fileUrl = parts.length > 6 ? parts[6] : "";
+	    const fileType = parts.length > 7 ? parts[7] : "";
+	    const fileName = parts.length > 8 ? parts[8] : "";
+	    const replyToId = parts.length > 9 ? parts[9] : "";
+	    const replyToSender = parts.length > 10 ? parts[10] : "";
+	    const replyToContent = parts.length > 11 ? parts[11] : "";
 
-		    console.log("FILE DEBUG:", fileUrl, fileType, fileName);
+	    const otherUser = from === username ? to : from;
 
-		    const otherUser = from === username ? to : from;
+	    if (!chatStore[otherUser]) chatStore[otherUser] = [];
 
-		    if (!chatStore[otherUser]) chatStore[otherUser] = [];
+	    chatStore[otherUser].push({ 
+	        id: messageId, from, text, time, 
+	        fileUrl, fileType, fileName,
+	        replyToId, replyToSender, replyToContent
+	    });
 
-		    chatStore[otherUser].push({ id: messageId, from, text, time, fileUrl, fileType, fileName });
+	    if (selectedUser === otherUser) {
+	        addMessage(from === username, text, time, messageId, "SENT", 
+	            fileUrl, fileType, fileName,
+	            replyToId, replyToSender, replyToContent);
+	        unread[otherUser] = 0;
+	        if (from !== username && document.hasFocus()) {
+	            socket.send("SEEN:" + otherUser);
+	        }
+	    } else {
+	        unread[otherUser] = (unread[otherUser] || 0) + 1;
+	    }
 
-		    if (selectedUser === otherUser) {
-		        addMessage(from === username, text, time, messageId, "SENT", fileUrl, fileType, fileName);
-		        unread[otherUser] = 0;
-		    } else {
-		        unread[otherUser] = (unread[otherUser] || 0) + 1;
-		    }
-
-		    loadConversations();
-		    return;
-		}
+	    loadConversations();
+	    return;
+	}
 }
 
 /* SEND */
 
 function sendMessage() {
     const msg = messageInput.value.trim();
+    if (!selectedUser) return;
+    if (!msg && !replyingTo) return;
 
-	if (!selectedUser) return;
+    let payload = msg;
 
-	if (!msg) return;
-	
-	if (messageInput.value.length > 1000) {
-	    showToast("Message too long (max 1000 characters)", "error");
-	    return;
-	}
-	socket.send("DM:" + selectedUser + ":" + msg);
-	messageInput.value = "";
+    if (replyingTo) {
+        const safeContent = replyingTo.text.replace(/\|/g, " ");
+        payload = `REPLY:${replyingTo.id}|${replyingTo.sender}|${safeContent}|${msg}`;
+    }
+
+    socket.send("DM:" + selectedUser + ":" + payload);
+    messageInput.value = "";
+    cancelReply();
 }
 
 
 
 /* MESSAGES */
-function addMessage(isMe, text, time, id, status = "SENT", fileUrl = "", fileType = "", fileName = "") {
+function addMessage(isMe, text, time, id, status = "SENT", fileUrl = "", fileType = "", fileName = "", replyToId = "", replyToSender = "", replyToContent = "") {
 
     const msg = document.createElement("div");
     msg.className = "message " + (isMe ? "me" : "other");
     if (id) msg.dataset.id = id;
 
-    let contentHtml = "";
+    let replyHtml = "";
+    if (replyToContent) {
+        replyHtml = `
+            <div class="reply-quote" onclick="scrollToMessage(${replyToId})">
+                <div class="reply-quote-sender">${replyToSender}</div>
+                <div class="reply-quote-text">${replyToContent}</div>
+            </div>
+        `;
+    }
 
+    let contentHtml = "";
     if (fileUrl) {
         if (fileType.startsWith("image/")) {
             contentHtml = `<img src="${fileUrl}" class="msg-image" onclick="window.open('${fileUrl}')" />`;
@@ -277,52 +299,61 @@ function addMessage(isMe, text, time, id, status = "SENT", fileUrl = "", fileTyp
         contentHtml += `<span class="message-text">${text}</span>`;
     }
 
-    msg.innerHTML = `<div class="bubble">${contentHtml}<span class="meta"><span class="time">${time}</span>${isMe ? `<span class="status ${status === "READ" ? "read" : ""}">${status === "DELIVERED" || status === "READ" ? "✓✓" : "✓"}</span>` : ``}</span></div>`;
+    msg.innerHTML = `
+        <div class="bubble">
+            ${replyHtml}
+            ${contentHtml}<span class="meta"><span class="time">${time}</span>${isMe ? `<span class="status ${status === "READ" ? "read" : ""}">${status === "DELIVERED" || status === "READ" ? "✓✓" : "✓"}</span>` : ``}</span>
+        </div>
+    `;
 
-    // 🗑 Add delete button only for my messages
-	if (isMe && id) {
+	if (id) {
+	    if (isMe) {
+	        const dropdownIndicator = document.createElement("span");
+	        dropdownIndicator.className = "message-dropdown";
+	        dropdownIndicator.innerHTML = "▾";
+	        msg.querySelector(".bubble").appendChild(dropdownIndicator);
+	    }
 
-	    // Add dropdown indicator
-	    const dropdownIndicator = document.createElement("span");
-	    dropdownIndicator.className = "message-dropdown";
-	    dropdownIndicator.innerHTML = "▾";
-
-	    msg.querySelector(".bubble").appendChild(dropdownIndicator);
-
-	    msg.onclick = (e) => {
+	    msg.querySelector(".bubble").onclick = (e) => {
 	        e.stopPropagation();
-	        showMessageMenu(id, msg);
+	        showMessageMenu(id, msg, isMe);
 	    };
 	}
-	
-    chatBox.appendChild(msg);
-	if (isMe && id && deliveredMessages.has(id)) {
-	    const statusSpan = msg.querySelector(".status");
-	    if (statusSpan) {
-	        statusSpan.textContent = "✓✓";
-	    }
-	}
-	chatBox.scrollTo({
-	    top: chatBox.scrollHeight,
-	    behavior: "smooth"
-	});
-}
+		
+		if (!isMe) {
+		    msg.querySelector(".bubble").onclick = (e) => {
+		        e.stopPropagation();
+		        showMessageMenu(id, msg, false);  // ← pass false for isMe
+		    };
+    }
 
+    chatBox.appendChild(msg);
+
+    if (isMe && id && deliveredMessages.has(id)) {
+        const statusSpan = msg.querySelector(".status");
+        if (statusSpan) statusSpan.textContent = "✓✓";
+    }
+
+    chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: "smooth" });
+}
 
 function renderChat(user) {
     chatBox.innerHTML = "";
 
     (chatStore[user] || []).forEach(msg => {
-        addMessage(
-            msg.from === username,
-            msg.text,
-            msg.time,
-            msg.id,
-            msg.status,
-            msg.fileUrl || "",
-            msg.fileType || "",
-            msg.fileName || ""
-        );
+		addMessage(
+		    isMe,
+		    msg.content,
+		    formatTime(msg.timestamp),
+		    msg.id,
+		    msg.status,
+		    msg.fileUrl || "",
+		    msg.fileType || "",
+		    msg.fileName || "",
+		    msg.replyToId || "",
+		    msg.replyToSender || "",
+		    msg.replyToContent || ""
+		);
     });
 }
 
@@ -704,6 +735,9 @@ document.addEventListener("DOMContentLoaded", function () {
 	    .finally(() => fileInput.value = "");
 	});
 	
+	document.getElementById("cancelReplyBtn").addEventListener("click", cancelReply);
+	
+	
 	
 	//block button
 	const blockUserBtn = document.getElementById("blockUserBtn");
@@ -1035,24 +1069,62 @@ function editMessage(id, messageElement) {
     });
 }
 
-function showMessageMenu(id, messageElement) {
+function showMessageMenu(id, messageElement, isMe) {
 
     removeExistingMenu();
 
     const menu = document.createElement("div");
     menu.className = "message-menu";
 
-    menu.innerHTML = `
-        <div class="menu-item" onclick="handleEdit(${id})">Edit</div>
-        <div class="menu-item delete" onclick="handleDelete(${id})">Delete</div>
-    `;
+    if (isMe) {
+        menu.innerHTML = `
+            <div class="menu-item" onclick="handleReply(${id})">Reply</div>
+            <div class="menu-item" onclick="handleEdit(${id})">Edit</div>
+            <div class="menu-item delete" onclick="handleDelete(${id})">Delete</div>
+        `;
+    } else {
+        menu.innerHTML = `
+            <div class="menu-item" onclick="handleReply(${id})">Reply</div>
+        `;
+    }
 
+    // Append first so we can measure it
     messageElement.appendChild(menu);
+
+    const menuHeight = menu.offsetHeight;
+    const msgRect = messageElement.getBoundingClientRect();
+    const chatBoxRect = chatBox.getBoundingClientRect();
+
+    const spaceBelow = chatBoxRect.bottom - msgRect.bottom;
+    const spaceAbove = msgRect.top - chatBoxRect.top;
+
+    if (spaceBelow >= menuHeight) {
+        // Enough space below — show below
+        menu.style.top = msgRect.height + "px";
+    } else if (spaceAbove >= menuHeight) {
+        // Not enough below — show above
+        menu.style.top = (-menuHeight) + "px";
+    } else {
+        // Fallback — show below anyway
+        menu.style.top = msgRect.height + "px";
+    }
 
     setTimeout(() => {
         document.addEventListener("click", removeExistingMenu, { once: true });
     }, 0);
 }
+
+
+function handleReply(id) {
+    removeExistingMenu();
+    const messageElement = document.querySelector('[data-id="' + id + '"]');
+    const textSpan = messageElement.querySelector(".message-text");
+    const text = textSpan ? textSpan.textContent : "";
+    const isMe = messageElement.classList.contains("me");
+    const sender = isMe ? username : selectedUser;
+    startReply(id, sender, text);
+}
+
 
 function removeExistingMenu() {
     const existing = document.querySelector(".message-menu");
@@ -1185,4 +1257,29 @@ function showToast(message, type = "success") {
         toast.classList.remove("show");
         setTimeout(() => toast.remove(), 300);
     }, 2000);
+}
+
+function startReply(id, sender, text) {
+    replyingTo = { id, sender, text };
+
+    document.getElementById("replyPreviewSender").textContent = sender;
+    document.getElementById("replyPreviewText").textContent = 
+        text.length > 60 ? text.substring(0, 60) + "..." : text;
+    document.getElementById("replyPreview").style.display = "flex";
+
+    messageInput.focus();
+}
+
+function cancelReply() {
+    replyingTo = null;
+    document.getElementById("replyPreview").style.display = "none";
+}
+
+function scrollToMessage(id) {
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("highlight");
+        setTimeout(() => el.classList.remove("highlight"), 1500);
+    }
 }

@@ -25,6 +25,19 @@ public class Message {
     private String fileUrl;
     private String fileType;
     private String fileName;
+    
+    private Long replyToId;
+    private String replyToContent;
+    private String replyToSender;
+
+    public Long getReplyToId() { return replyToId; }
+    public void setReplyToId(Long replyToId) { this.replyToId = replyToId; }
+
+    public String getReplyToContent() { return replyToContent; }
+    public void setReplyToContent(String replyToContent) { this.replyToContent = replyToContent; }
+
+    public String getReplyToSender() { return replyToSender; }
+    public void setReplyToSender(String replyToSender) { this.replyToSender = replyToSender; }
 
     // add getters and setters
     public String getFileUrl() { return fileUrl; }
