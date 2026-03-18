@@ -602,6 +602,62 @@ function loadAllUsers() {
 
 document.addEventListener("DOMContentLoaded", function () {
 	
+	// ===== EMOJI PICKER =====
+	const emojiBtn = document.getElementById("emojiBtn");
+	const emojiPickerContainer = document.getElementById("emojiPickerContainer");
+	let emojiPickerVisible = false;
+	let pickerInstance = null;
+
+	emojiBtn.addEventListener("click", (e) => {
+	    e.stopPropagation();
+
+	    if (!selectedUser) {
+	        showToast("Select a chat first", "error");
+	        return;
+	    }
+
+	    if (emojiPickerVisible) {
+	        emojiPickerContainer.style.display = "none";
+	        emojiPickerVisible = false;
+	        return;
+	    }
+
+	    // Create picker only once
+	    if (!pickerInstance) {
+	        pickerInstance = new EmojiMart.Picker({
+	            theme: "light",
+	            previewPosition: "none",
+	            skinTonePosition: "none",
+	            searchPosition: "sticky",
+	            navPosition: "bottom",
+	            perLine: 8,
+	            onEmojiSelect: (emoji) => {
+	                const input = document.getElementById("messageInput");
+	                const start = input.selectionStart;
+	                const end = input.selectionEnd;
+	                const text = input.value;
+	                input.value = text.slice(0, start) + emoji.native + text.slice(end);
+	                input.selectionStart = input.selectionEnd = start + emoji.native.length;
+	                input.focus();
+	            }
+	        });
+	        emojiPickerContainer.appendChild(pickerInstance);
+	    }
+
+	    emojiPickerContainer.style.display = "block";
+	    emojiPickerVisible = true;
+	});
+
+	// Close picker when clicking outside
+	document.addEventListener("click", (e) => {
+	    if (emojiPickerVisible &&
+	        !emojiPickerContainer.contains(e.target) &&
+	        e.target !== emojiBtn) {
+	        emojiPickerContainer.style.display = "none";
+	        emojiPickerVisible = false;
+	    }
+	});
+	
 	const attachBtn = document.getElementById("attachBtn");
 	const fileInput = document.getElementById("fileInput");
 

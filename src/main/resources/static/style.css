@@ -272,6 +272,7 @@ body {
   gap: 12px;
   background: #ffffff;
   border-top: 1px solid #ececf2;
+  position: relative;   /* ← add this */
 }
 
 .chat-input input {
@@ -1088,4 +1089,37 @@ body {
 
 .attach-btn:hover {
   background: #dcdcf9;
+}
+
+.emoji-btn {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: #ebebf8;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.2s ease;
+    line-height: 1;
+}
+
+.emoji-btn:hover {
+    background: #dcdcf9;
+}
+
+.emoji-picker-container {
+    display: none;
+    position: absolute;
+    bottom: 75px;
+    left: 20px;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+em-emoji-picker {
+    --border-radius: 16px;
+    --shadow: none;
+    height: 380px;
+    width: 320px;
 }
