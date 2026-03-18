@@ -17,7 +17,6 @@ function apiFetch(url, options = {}) {
         "Authorization": "Bearer " + token
     };
 
-    // Don't set Content-Type for FormData - browser does it automatically
     if (!(options.body instanceof FormData)) {
         defaultHeaders["Content-Type"] = "application/json";
     }
@@ -29,12 +28,44 @@ function apiFetch(url, options = {}) {
 
     return fetch(url, options)
         .then(res => {
+
             if (res.status === 401) {
-                localStorage.clear();
-                sessionStorage.setItem("sessionExpired", "true");
-                window.location.href = "login.html";
-                return Promise.reject("Unauthorized");
+                // Try to refresh token
+                const refreshToken = localStorage.getItem("refreshToken");
+
+                if (!refreshToken) {
+                    localStorage.clear();
+                    sessionStorage.setItem("sessionExpired", "true");
+                    window.location.href = "login.html";
+                    return Promise.reject("Unauthorized");
+                }
+
+                return fetch("/api/auth/refresh", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refreshToken })
+                })
+                .then(r => r.json())
+                .then(data => {
+
+                    if (data.error) {
+                        // Refresh token also expired
+                        localStorage.clear();
+                        sessionStorage.setItem("sessionExpired", "true");
+                        window.location.href = "login.html";
+                        return Promise.reject("Session expired");
+                    }
+
+                    // Save new access token
+                    token = data.token;
+                    localStorage.setItem("jwt", data.token);
+
+                    // Retry original request with new token
+                    options.headers["Authorization"] = "Bearer " + token;
+                    return fetch(url, options);
+                });
             }
+
             return res;
         })
         .catch(err => {
@@ -61,10 +92,10 @@ function connectWebSocket() {
 
     const connectionStatus = document.getElementById("connectionStatus");
 
-    socket = new WebSocket(
-        "ws://localhost:8080/chat?token=" + token
-    );
-
+	socket = new WebSocket(
+	    "ws://localhost:8080/chat?token=" + localStorage.getItem("jwt")
+	);
+	
     socket.onopen = () => {
         console.log("WEBSOCKET CONNECTED");
 		
@@ -810,8 +841,17 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	logoutBtnPanel.addEventListener("click", function () {
-	    localStorage.clear();
-	    window.location.href = "login.html";
+	    const refreshToken = localStorage.getItem("refreshToken");
+
+	    fetch("/api/auth/logout", {
+	        method: "POST",
+	        headers: { "Content-Type": "application/json" },
+	        body: JSON.stringify({ refreshToken })
+	    })
+	    .finally(() => {
+	        localStorage.clear();
+	        window.location.href = "login.html";
+	    });
 	});
 	
 	// ===== NEW CHAT MODAL =====

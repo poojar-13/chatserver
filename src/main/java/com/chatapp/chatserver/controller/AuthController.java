@@ -3,7 +3,8 @@ package com.chatapp.chatserver.controller;
 import com.chatapp.chatserver.model.User;
 import com.chatapp.chatserver.repository.UserRepository;
 import com.chatapp.chatserver.security.JwtUtil;
-
+import com.chatapp.chatserver.model.RefreshToken;
+import com.chatapp.chatserver.repository.RefreshTokenRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import com.chatapp.chatserver.model.VerificationToken;
@@ -26,25 +27,27 @@ public class AuthController {
     private final VerificationTokenRepository verificationTokenRepository;
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-
-
+    private final RefreshTokenRepository refreshTokenRepository;
+    
 
     public AuthController(UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
             VerificationTokenRepository verificationTokenRepository,
             EmailService emailService,
-            PasswordResetTokenRepository passwordResetTokenRepository) {
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            RefreshTokenRepository refreshTokenRepository) {
 
-this.userRepository = userRepository;
-this.passwordEncoder = passwordEncoder;
-this.jwtUtil = jwtUtil;
-this.verificationTokenRepository = verificationTokenRepository;
-this.emailService = emailService;
-this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.verificationTokenRepository = verificationTokenRepository;
+        this.emailService = emailService;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
 }
 
-
+   
 
     // SIGN UP
     @PostMapping("/signup")
@@ -99,7 +102,7 @@ this.passwordResetTokenRepository = passwordResetTokenRepository;
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody Map<String, String> body) {
 
-    	String email = body.get("email");
+        String email = body.get("email");
         String password = body.get("password");
 
         return userRepository.findByEmail(email)
@@ -112,13 +115,17 @@ this.passwordResetTokenRepository = passwordResetTokenRepository;
 
                     String token = jwtUtil.generateToken(user.getUsername());
 
+                    refreshTokenRepository.deleteByUser_Id(user.getId());
+                    RefreshToken refreshToken = new RefreshToken(user);
+                    refreshTokenRepository.save(refreshToken);
+
                     return Map.of(
                             "token", token,
+                            "refreshToken", refreshToken.getToken(),
                             "username", user.getUsername(),
                             "displayName", user.getDisplayName()
                     );
                 })
-
                 .orElse(Map.of("error", "Invalid credentials"));
     }
     
@@ -206,7 +213,42 @@ this.passwordResetTokenRepository = passwordResetTokenRepository;
                 })
                 .orElse("Invalid reset token");
     }
+    
+    @PostMapping("/refresh")
+    public Map<String, String> refresh(@RequestBody Map<String, String> body) {
 
+        String refreshToken = body.get("refreshToken");
+
+        if (refreshToken == null) {
+            return Map.of("error", "Refresh token required");
+        }
+
+        return refreshTokenRepository.findByToken(refreshToken)
+                .map(rt -> {
+
+                    if (rt.getExpiryDate().isBefore(java.time.LocalDateTime.now())) {
+                        refreshTokenRepository.delete(rt);
+                        return Map.of("error", "Refresh token expired");
+                    }
+
+                    String newToken = jwtUtil.generateToken(rt.getUser().getUsername());
+                    return Map.of("token", newToken);
+                })
+                .orElse(Map.of("error", "Invalid refresh token"));
+    }
+
+    @PostMapping("/logout")
+    public String logout(@RequestBody Map<String, String> body) {
+
+        String refreshToken = body.get("refreshToken");
+
+        if (refreshToken != null) {
+            refreshTokenRepository.findByToken(refreshToken)
+                    .ifPresent(refreshTokenRepository::delete);
+        }
+
+        return "Logged out successfully";
+    }
 
 
 }
