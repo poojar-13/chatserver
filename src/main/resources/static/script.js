@@ -92,8 +92,10 @@ function connectWebSocket() {
 
     const connectionStatus = document.getElementById("connectionStatus");
 
+	const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+	const wsHost = window.location.host;
 	socket = new WebSocket(
-	    "ws://localhost:8080/chat?token=" + localStorage.getItem("jwt")
+	    `${wsProtocol}//${wsHost}/chat?token=${localStorage.getItem("jwt")}`
 	);
 	
     socket.onopen = () => {
