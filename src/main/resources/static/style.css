@@ -1092,18 +1092,23 @@ body {
 }
 
 .emoji-btn {
-    padding: 10px 12px;
+    padding: 8px;
     border-radius: 8px;
     border: none;
-    background: #ebebf8;
+    background: transparent;
     cursor: pointer;
-    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: background 0.2s ease;
-    line-height: 1;
 }
 
 .emoji-btn:hover {
-    background: #dcdcf9;
+    background: #ebebf8;
+}
+
+.emoji-btn:hover svg {
+    stroke: #5B4B8A;  /* turns purple on hover to match your theme */
 }
 
 .emoji-picker-container {
