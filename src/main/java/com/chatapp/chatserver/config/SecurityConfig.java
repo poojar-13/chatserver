@@ -25,23 +25,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/chat/**").permitAll()
-                .requestMatchers("/**/*.html",
-                                 "/**/*.css",
-                                 "/**/*.js",
-                                 "/**/*.png").permitAll()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter,
-                    UsernamePasswordAuthenticationFilter.class);
-
+    	http
+        .csrf(csrf -> csrf.disable())
+        .cors(cors -> cors.disable())  // ← ADD THIS
+        .sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/chat/**").permitAll()
+            .requestMatchers("/api/files/**").permitAll()
+            .requestMatchers("/**/*.html", "/**/*.css", "/**/*.js", "/**/*.png").permitAll()
+            .anyRequest().authenticated()
+        )
+        .addFilterBefore(jwtAuthFilter,
+                UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
