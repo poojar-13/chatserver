@@ -21,7 +21,7 @@ public class EmailService {
     private String baseUrl;
 
     private void sendEmail(String toEmail, String subject, String htmlContent) {
-        Email from = new Email(fromEmail, "Tether");
+        Email from = new Email(fromEmail, "ChatApp");
         Email to = new Email(toEmail);
         Content content = new Content("text/html", htmlContent);
         Mail mail = new Mail(from, subject, to, content);
@@ -44,33 +44,33 @@ public class EmailService {
         String verificationUrl = baseUrl + "/api/auth/verify?token=" + token;
 
         String html = """
-        	    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 12px; border: 1px solid #e5e5e5;">
-        	        <h2 style="color: #5B4B8A;">Verify your Tether account</h2>
-        	        <p style="color: #555;">Thanks for signing up! Click the button below to verify your email address.</p>
-        	        <a href="%s" style="display:inline-block; margin-top:16px; padding: 12px 24px; background: #5B4B8A; color: white; border-radius: 8px; text-decoration: none; font-weight: bold;">
-        	            Verify Email
-        	        </a>
-        	        <p style="color: #aaa; font-size: 12px; margin-top: 24px;">This link expires in 24 hours. If you didn't sign up for Tether, ignore this email.</p>
-        	    </div>
-        	""".formatted(verificationUrl);
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 12px; border: 1px solid #e5e5e5;">
+                <h2 style="color: #5B4B8A;">Verify your ChatApp account</h2>
+                <p style="color: #555;">Thanks for signing up! Click the button below to verify your email address.</p>
+                <a href="%s" style="display:inline-block; margin-top:16px; padding: 12px 24px; background: #5B4B8A; color: white; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                    Verify Email
+                </a>
+                <p style="color: #aaa; font-size: 12px; margin-top: 24px;">This link expires in 24 hours. If you didn't sign up, ignore this email.</p>
+            </div>
+        """.formatted(verificationUrl);
 
-        	sendEmail(toEmail, "Verify your Tether account", html);
+        sendEmail(toEmail, "Verify your ChatApp account", html);
     }
 
     public void sendPasswordResetEmail(String toEmail, String token) {
         String resetUrl = baseUrl + "/reset-password.html?token=" + token;
 
         String html = """
-        	    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 12px; border: 1px solid #e5e5e5;">
-        	        <h2 style="color: #5B4B8A;">Reset your Tether password</h2>
-        	        <p style="color: #555;">We received a request to reset your password. Click the button below to set a new one.</p>
-        	        <a href="%s" style="display:inline-block; margin-top:16px; padding: 12px 24px; background: #5B4B8A; color: white; border-radius: 8px; text-decoration: none; font-weight: bold;">
-        	            Reset Password
-        	        </a>
-        	        <p style="color: #aaa; font-size: 12px; margin-top: 24px;">This link expires in 30 minutes. If you didn't request this from Tether, ignore this email.</p>
-        	    </div>
-        	""".formatted(resetUrl);
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; border-radius: 12px; border: 1px solid #e5e5e5;">
+                <h2 style="color: #5B4B8A;">Reset your ChatApp password</h2>
+                <p style="color: #555;">We received a request to reset your password. Click the button below to set a new one.</p>
+                <a href="%s" style="display:inline-block; margin-top:16px; padding: 12px 24px; background: #5B4B8A; color: white; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                    Reset Password
+                </a>
+                <p style="color: #aaa; font-size: 12px; margin-top: 24px;">This link expires in 30 minutes. If you didn't request this, ignore this email.</p>
+            </div>
+        """.formatted(resetUrl);
 
-        	sendEmail(toEmail, "Reset your Tether password", html);
+        sendEmail(toEmail, "Reset your ChatApp password", html);
     }
 }
